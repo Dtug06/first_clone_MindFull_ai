@@ -1,0 +1,31 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  # --- G1-T03: in-memory H2 so Surefire can boot context without a
+  # local PostgreSQL. MODE=PostgreSQL keeps dialect behaviour close to
+  # PG so future Flyway migrations (T04) can also be exercised in tests.
+  datasource:
+    url: jdbc:h2:mem:mindbridge_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      # Dialect is auto-detected by Hibernate from the JDBC driver;
+      # setting it explicitly triggers a HHH90000025 deprecation WARN.
+
+logging:
+  level:
+    root: WARN
+    com.mindbridge: INFO
+    org.springframework: WARN
+    # G1-T03: surface HikariCP pool init in test logs so the smoke
+    # test gives visible evidence of datasource wiring.
+    com.zaxxer.hikari: DEBUG

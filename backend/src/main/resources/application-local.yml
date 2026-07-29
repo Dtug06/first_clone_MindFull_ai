@@ -1,0 +1,48 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  # --- G1-T03: real PostgreSQL 17 connection ---
+  # All values are read from environment variables. Local dev loads them
+  # from `.env` (git-ignored). See backend/README.md § "Database setup"
+  # for the exact steps to create `mindbridge_dev` and `mindbridge_app`.
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    # HikariCP defaults are documented inline. Values shown match Spring
+    # Boot 3.3.5 defaults — explicit only for clarity at the MVP stage.
+    hikari:
+      pool-name: MindBridgeHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # --- G1-T03: JPA + Hibernate layer ---
+  jpa:
+    open-in-view: false
+    hibernate:
+      # No JPA entities exist yet (those land in T06+), so `validate`
+      # would fail on every empty DB and `none` is the safe choice for
+      # T03. Switch to `validate` once the first entity ships.
+      ddl-auto: none
+    properties:
+      # Enforce UTC at Hibernate layer so any future entity that uses
+      # java.time types persists in UTC regardless of host TZ.
+      hibernate.jdbc.time_zone: UTC
+      # SQL formatting off; we'll enable for debugging in `local` only
+      # if a real investigation needs it.
+      hibernate.format_sql: false
+
+logging:
+  level:
+    root: INFO
+    com.mindbridge: INFO
+    org.springframework: INFO
+    org.hibernate: WARN
+    # Make HikariCP pool startup visible so devs can confirm connection.
+    com.zaxxer.hikari: INFO

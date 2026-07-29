@@ -45,8 +45,9 @@ Không ghi một chức năng là `COMPLETED` nếu chưa kiểm tra source, bui
 - Team size: 2 developers
 - Current branch: `develop`
 - Current release target: `MVP`
-- Last updated: `YYYY-MM-DD`
-- Updated by: `DEV_NAME`
+- Last updated: `2026-07-30`
+- Updated by: `TMon283`
+- Frozen frontend baseline: tag `v0.0.1-frontend-baseline` → commit `128eece`
 
 ---
 
@@ -92,16 +93,34 @@ They do not prove that corresponding business functions are implemented.
 
 ```text
 Current Group:
-G1 / G2 / G3 / G4 / G5 / G6 / G7 / G8
+G1 — Backend Foundation, Auth and Consent
 
 Current Task:
-Gx-Txx-task-name
+G1-T03-thiet-lap-postgresql-va-cau-hinh-moi-truong
 
 Current Goal:
-Mô tả ngắn mục tiêu đang thực hiện.
+Wiring Spring Boot 3.3.5 tới PostgreSQL 17 native install (port 5432) qua biến môi trường — không hard-code secret. Thêm `spring-boot-starter-data-jpa` + driver `org.postgresql` (BOM-managed 42.7.x), H2 ở scope runtime cho profile `test`. Cấu hình datasource ở `application-{local,prod}.yml` đọc `${DATABASE_URL/USERNAME/PASSWORD}`, profile `test` dùng H2 in-memory `MODE=PostgreSQL`. Tài liệu `backend/README.md` § "Database setup" ghi rõ 3 lệnh SQL idempotent (`CREATE ROLE mindbridge_app`, `CREATE DATABASE mindbridge_dev`, GRANT tối thiểu) cho dev thứ hai.
 
 Current Blockers:
-- NONE
+- T01 + T02 chưa merge vào develop (thiếu GitHub credentials) — branch T03 base từ `feature/G1-T02-spring-boot-scaffold`; khi T02 merge thì rebase T03 lên develop trước khi merge T03.
+- PostgreSQL 17 đã chạy (`Get-Service postgresql-x64-17` = Running, `pg_isready` = accepting connections); việc tạo `mindbridge_dev` + `mindbridge_app` do user chạy tay qua psql, app chỉ verify bằng profile `test` (H2) để không phụ thuộc secret PG thật.
+- Frontend `npm run build` chưa được verify end-to-end (không do T03 gây ra).
+```
+
+---
+
+## 4a. Ready Task (tiếp theo)
+
+```text
+G1-T04 — Thiết lập Flyway và extension PostgreSQL
+- Phụ thuộc: G1-T03 (PostgreSQL datasource đã wired)
+- Ưu tiên: MUST
+- Sau khi merge G1-T03 vào develop thì bắt đầu được
+
+G1-T05 — Chuẩn hóa DTO, validation và API response
+- Phụ thuộc: G1-T02 (branch develop + pom.xml + Spring Boot 3.3.5 + cấu trúc profile)
+- Ưu tiên: MUST
+- Song song với T03/T04 có thể được
 ```
 
 Ví dụ:
@@ -126,7 +145,7 @@ Current Blockers:
 
 | Group | Name | Status | Owner | Notes |
 |---|---|---|---|---|
-| G1 | Backend Foundation, Auth and Consent | NOT_STARTED | UNASSIGNED | |
+| G1 | Backend Foundation, Auth and Consent | IN_REVIEW | UNASSIGNED | G1-T01 review local; G1-T02 Spring Boot scaffold local (commit `72866c9`); cả 2 chờ push origin (T01 và T02 cùng chờ GitHub credentials) |
 | G2 | Chat, Daily Check-in and Data Collection | NOT_STARTED | UNASSIGNED | |
 | G3 | LLM Integration and Safety | NOT_STARTED | UNASSIGNED | |
 | G4 | Behavior Analysis and User Profile | NOT_STARTED | UNASSIGNED | |
@@ -158,6 +177,9 @@ Ví dụ:
 
 | Task ID | Task Name | Owner | Started Date | Branch | Current State |
 |---|---|---|---|---|---|
+| G1-T01 | Đóng băng baseline và chuẩn hóa repository | UNASSIGNED | 2026-07-30 | feature/G1-T01-baseline-standardization | Local commit `8246545` đã ghi; tag `v0.0.1-frontend-baseline` → `128eece` đã tạo; đang chờ push origin (GitHub credentials) và merge vào develop. Verification A1–A11 pass, không touch frontend code, không tạo migration/API/test |
+| G1-T02 | Khởi tạo Spring Boot Java 21 | UNASSIGNED | 2026-07-30 | feature/G1-T02-spring-boot-scaffold | **Phase 3 review PASS (2026-07-30)**. Local commits `72866c9` (scaffold) + `10fec7f` (status) + new commit (DoD checklist + review note) trên top của feature/G1-T01. Spring Boot 3.3.5 + Maven Wrapper 3.3.4 + Java 21. 3 starter (web/validation/actuator). 4 profile (base+local/test/prod). Verify: `mvnw clean compile` BUILD SUCCESS (9.96s), `mvnw clean test` BUILD SUCCESS (6.131s, no test yet), `mvnw spring-boot:run` Started in 2.84s, `GET /api/v1/actuator/health` 200 `{"status":"UP"}`, `GET /api/v1/nonexistent` 404 không lộ stack trace. DoD §4.1+§4.2 PASS, §4.3 deferred sang G1-T05 (đã ghi trong task file). 32/32 rules of `00-project-core.mdc` PASS. Đang chờ push origin (T01 chưa merge nên T02 base từ T01 feature). |
+| G1-T03 | Thiết lập PostgreSQL và cấu hình môi trường | UNASSIGNED | 2026-07-30 | feature/G1-T03-postgresql-datasource | Phase 2 in progress — wired `spring-boot-starter-data-jpa` + `org.postgresql:postgresql` (BOM-managed 42.7.x) + H2 (runtime, profile `test`). `application-{local,prod}.yml` đọc `${DATABASE_URL/USERNAME/PASSWORD}`; `application-test.yml` dùng H2 in-memory `MODE=PostgreSQL`. `hibernate.jdbc.time_zone=UTC` ở cả 3 profile; `ddl-auto=none` (chưa có entity, chờ T04 Flyway). Smoke test `DatabaseContextSmokeTest` verify context boots + DataSource/EntityManager wiring với profile `test`. Docs: `backend/README.md` § "Database setup" (3 lệnh SQL idempotent cho dev mới). `.env.example` liệt kê biến `DATABASE_URL/USERNAME/PASSWORD` (placeholder), `.env` đã được `.gitignore` chặn. Đợi verify compile/test thật + user chạy SQL trên máy thật để chốt DoD §4. |
 | — | — | — | — | — | — |
 
 Ví dụ:
@@ -170,11 +192,13 @@ Ví dụ:
 
 # 8. Ready Tasks
 
-Các task có thể bắt đầu ngay.
+Các task có thể bắt đầu ngay (sau khi G1-T01 + G1-T02 merge vào develop).
 
 | Priority | Task ID | Task Name | Dependencies | Suggested Owner |
 |---|---|---|---|---|
-| MUST | — | — | — | — |
+| MUST | G1-T03 | Thiết lập PostgreSQL và cấu hình môi trường | G1-T01 + G1-T02 (branch develop + pom.xml + Spring Boot 3.3.5 + profile structure) | Dev B |
+| MUST | G1-T04 | Thiết lập Flyway và extension PostgreSQL | G1-T03 | (sau G1-T03) |
+| MUST | G1-T05 | Chuẩn hóa DTO, validation và API response | G1-T02 | (sau G1-T02) |
 
 Chỉ nên có khoảng 5–10 task ở trạng thái READY.
 
@@ -184,7 +208,8 @@ Chỉ nên có khoảng 5–10 task ở trạng thái READY.
 
 | Task ID | Task Name | Blocked By | Required Action | Owner |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| G1-T01 (push) | Push feature branch + develop + tag lên origin | Thiếu GitHub credentials (password auth đã bị GitHub vô hiệu hoá từ 2021-08) | Dev cấu hình Personal Access Token (scope `repo`) hoặc SSH key cho remote `origin`, sau đó chạy `git push origin develop && git push origin feature/G1-T01-baseline-standardization && git push origin v0.0.1-frontend-baseline` | UNASSIGNED |
+| G1-T02 (push) | Push feature branch lên origin | Thiếu GitHub credentials (cùng block với T01) | Sau khi T01 merge xong, rebase T02 lên develop, rồi push `feature/G1-T02-spring-boot-scaffold`; merge vào develop | UNASSIGNED |
 
 Ví dụ:
 
@@ -497,16 +522,25 @@ NOT_CREATED
 
 | Test Area | Status | Latest Result |
 |---|---|---|
-| Backend Build | NOT_RUN | |
+| Backend Build | PASS | `.\mvnw.cmd clean compile` BUILD SUCCESS (9.96s, 1 source file + 5 resource) after Maven 3.9.16 downloaded via Wrapper 3.3.4 |
 | Backend Unit Tests | NOT_RUN | |
 | Backend Integration Tests | NOT_RUN | |
 | Flyway Migration Test | NOT_RUN | |
 | Frontend Type Check | NOT_RUN | |
-| Frontend Build | NOT_RUN | |
+| Frontend Build | NOT_RUN | `npm run build` chưa chạy được vì `frontend/node_modules/` thiếu (chưa `npm install` từ session trước). KHÔNG phải do G1-T01/T02 gây ra | |
 | End-to-End Test | NOT_RUN | |
 | Safety Tests | NOT_RUN | |
 | CBT State Tests | NOT_RUN | |
 | Matching Tests | NOT_RUN | |
+
+**G1-T02 verification (local, 2026-07-30)**:
+
+```text
+.\mvnw.cmd clean compile       -- BUILD SUCCESS (9.96s)
+.\mvnw.cmd spring-boot:run     -- Started MindBridgeApplication in 2.84s, profile=local
+GET /api/v1/actuator/health    -- 200 {"status":"UP"}
+GET /api/v1/nonexistent        -- 404 (no stack trace, no SQL leaking)
+```
 
 Không ghi `PASS` nếu không có command đã chạy.
 
@@ -529,7 +563,7 @@ Không ghi `PASS` nếu không có command đã chạy.
 
 | ID | Severity | Description | Owner | Status |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| ISSUE-003 | LOW | G1-T01 push origin thất bại do remote `origin` chưa có credentials (GitHub bỏ password auth từ 2021) | UNASSIGNED | OPEN |
 
 Severity:
 
@@ -566,10 +600,10 @@ Ghi lại các quyết định quan trọng đã chốt.
 ## Backend
 
 ```text
-Java version:
-Spring Boot version:
-Maven version:
-Backend port:
+Java version:       21.0.10 (LTS, Adoptium-style)
+Spring Boot version: 3.3.5
+Maven version:      3.9.16 (via Maven Wrapper 3.3.4)
+Backend port:       8080 with context-path /api/v1
 ```
 
 ## Frontend
@@ -583,20 +617,27 @@ Frontend port:
 ## Database
 
 ```text
-PostgreSQL version:
-Database name:
-Required extensions:
+PostgreSQL version: 17.10 (native install, Windows service postgresql-x64-17, port 5432)
+Database name: mindbridge_dev (created by G1-T03 manual SQL; see backend/README.md § "Database setup")
+Database user: mindbridge_app (least-privilege role; connects with GRANT SELECT/INSERT/UPDATE/DELETE on public)
+Required extensions: (filled by G1-T04 — Flyway + citext/pgcrypto)
+Driver: org.postgresql 42.7.x (BOM-managed via spring-boot-dependencies 3.3.5)
+Test DB: H2 in-memory `MODE=PostgreSQL` (scope runtime, profile `test` only)
 ```
 
 ## Required Environment Variables
 
+Biến môi trường chuẩn hoá bởi G1-T01 (xem [`.env.example`](../.env.example)). Tên biến không đổi cho tới khi task tương ứng sửa.
+
 ```text
-DATABASE_URL
-DATABASE_USERNAME
-DATABASE_PASSWORD
-JWT_SECRET
-LLM_PROVIDER
-LLM_API_KEY
+DATABASE_URL          # dùng từ G1-T03
+DATABASE_USERNAME     # dùng từ G1-T03
+DATABASE_PASSWORD     # dùng từ G1-T03
+JWT_SECRET            # dùng từ G1-T06
+JWT_EXPIRATION        # dùng từ G1-T06
+APP_CORS_ALLOWED_ORIGINS  # dùng từ G1-T10
+LLM_PROVIDER          # dùng từ G3
+LLM_API_KEY           # dùng từ G3 (CHƯA thêm vào .env.example — sẽ làm khi G3 bắt đầu)
 ```
 
 Không ghi giá trị secret thật.
@@ -607,14 +648,19 @@ Không ghi giá trị secret thật.
 
 Thứ tự task tiếp theo:
 
-1. `TASK_ID`
-2. `TASK_ID`
-3. `TASK_ID`
+Thứ tự task tiếp theo (sau khi G1-T01 merge vào develop):
+
+1. `G1-T02 — Khởi tạo Spring Boot Java 21`
+2. `G1-T03 — Thiết lập PostgreSQL và cấu hình môi trường`
+3. `G1-T04 — Thiết lập Flyway và extension PostgreSQL`
+4. `G1-T05 — Chuẩn hóa DTO, validation và API response`
 
 Lý do:
 
 ```text
-Mô tả dependency và mức ưu tiên.
+G1-T01 chuẩn hoá repo (tag, branches, .gitignore, .env.example, README, CONTRIBUTING, docs/git-workflow.md) — đã hoàn thành local, đang chờ push origin.
+G1-T02 là task backend đầu tiên phụ thuộc G1-T01 (cần branch develop, .env.example). G1-T03 song song có thể làm sau G1-T01.
+G1-T04 + G1-T05 tiếp tục xây nền tảng Spring Boot trước khi G1-T06 (JWT auth).
 ```
 
 Ví dụ:

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.mindbridge</groupId>
+    <artifactId>mindbridge-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>MindBridge AI Backend</name>
+    <description>Modular monolith backend for MindBridge AI (MVP)</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+        <!--
+          Starter dependencies are intentionally minimal for G1-T02.
+          Each starter lists the task that requires it for traceability.
+
+          Added in G1-T02:
+            - web:       embedded Tomcat, needed for `mvn spring-boot:run` to boot.
+            - validation: Bean Validation support for upcoming `@Valid` request DTOs.
+            - actuator:  `/actuator/health` for ops smoke checks.
+
+          Added in G1-T03:
+            - data-jpa:   JPA + Hibernate + HikariCP default pool. Required because
+                          the app must connect to a real PostgreSQL instance.
+                          spring-boot-dependencies BOM pins Hibernate 6.5.x which
+                          supports PostgreSQL 17.
+            - postgresql: JDBC driver for PostgreSQL. BOM-managed (no explicit
+                          version); current 42.7.x line supports PG 17 wire
+                          protocol. `runtime` scope because the driver is loaded
+                          reflectively by JDBC, never imported in source.
+            - h2:         In-memory database for automated tests (profile `test`).
+                          `MODE=PostgreSQL` (set in application-test.yml) keeps
+                          dialect close enough for our migrations later.
+                          `runtime` scope (not `test`) so the driver is on the
+                          main classpath and `mvnw spring-boot:run` with profile
+                          `test` can boot the context end-to-end for smoke
+                          checks. Production profile (`prod`) never references
+                          the H2 URL, so the bundled driver is harmless extra
+                          weight (~1.5 MB).
+
+          Deferred to later tasks (not added in T02/T03 to keep the change minimal):
+            - security:   G1-T06 (auth module + JWT filter)
+            - flyway:     G1-T04 (schema migrations)
+            - springdoc:  G1-T10 (Swagger UI)
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- G1-T03: real database + driver + test in-memory DB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
