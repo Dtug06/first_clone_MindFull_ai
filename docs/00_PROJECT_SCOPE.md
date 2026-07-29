@@ -370,6 +370,46 @@ Nguyên tắc:
 
 ---
 
+## Existing Frontend Prototype
+
+Repository hiện có một frontend prototype dùng để:
+
+- Tham khảo giao diện.
+- Tham khảo bố cục trang.
+- Tham khảo trải nghiệm người dùng dự kiến.
+- Tham khảo theme, component và navigation.
+
+Frontend hiện tại:
+
+- Chưa có backend.
+- Chưa có API integration.
+- Chưa có authentication thật.
+- Chưa có authorization thật.
+- Chưa có business logic hoàn chỉnh.
+- Đang sử dụng mock và placeholder data.
+- AI Chat hiện chỉ mô phỏng phản hồi.
+- Các số liệu Dashboard, Admin và Expert chỉ là dữ liệu demo.
+
+Frontend prototype không phải là nguồn xác định:
+
+- Database schema.
+- API contract.
+- Business rules.
+- Safety rules.
+- CBT workflow.
+- Authentication flow.
+
+Khi triển khai chức năng thật, ưu tiên:
+
+1. Task hiện tại.
+2. API Contract.
+3. Database Design.
+4. Safety và CBT Rules.
+5. Architecture.
+6. Frontend prototype chỉ dùng làm UI reference.
+
+---
+
 ## 4. Out of Scope
 
 Không triển khai trong MVP:

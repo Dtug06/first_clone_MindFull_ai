@@ -6,11 +6,18 @@ alwaysApply: true
 # MindBridge AI Core Rules
 
 - Work only on the current task file under `docs/tasks/`.
-- The current task file is the highest-priority requirement.
+- The current task file controls the current implementation scope.
+- A task must not override approved Safety, Security, Consent, ownership,
+  database immutability or CBT invariants.
+- Report conflicts instead of silently choosing one source.
 - Follow `docs/03_API_CONTRACT.yaml` for endpoint and DTO field names.
 - Follow `docs/02_DATABASE_MVP.md` for database scope and invariants.
 - Follow `docs/01_ARCHITECTURE.md` for module boundaries.
-- Preserve the existing frontend design unless the task explicitly requires a UI change.
+- Treat the existing frontend as a UI prototype.
+- Preserve its visual design when practical.
+- Do not infer backend business rules from frontend mock data.
+- Approved API, database, Safety and CBT rules take priority over prototype behavior.
+- Small frontend changes are allowed when required for correct integration.
 - Do not invent product requirements.
 - Do not invent clinical thresholds.
 - Do not invent CBT content.

@@ -20,14 +20,39 @@ Không triển khai Microservices trong MVP.
 ## 2. Repository Structure
 
 ```text
-mindbridge-ai/
-├── backend/
-├── frontend/
-├── database/
+first_clone_MindFull_ai/
+├── src/                         # Existing frontend prototype
+│   ├── components/
+│   ├── data/
+│   ├── pages/
+│   ├── types/
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── public/
+│
+├── backend/                     # Spring Boot backend sẽ được tạo
+│   ├── pom.xml
+│   ├── mvnw
+│   └── src/
+│       ├── main/
+│       └── test/
+│
 ├── docs/
 │   ├── tasks/
-│   └── ...
-├── seed-data/
+│   ├── 00_PROJECT_SCOPE.md
+│   ├── 01_ARCHITECTURE.md
+│   ├── 02_DATABASE_MVP.md
+│   ├── 03_API_CONTRACT.yaml
+│   ├── 04_SAFETY_AND_CBT_RULES.md
+│   └── 05_IMPLEMENTATION_STATUS.md
+│
+├── .cursor/
+│   ├── rules/
+│   └── commands/
+│
+├── package.json
+├── vite.config.ts
 └── README.md
 ```
 

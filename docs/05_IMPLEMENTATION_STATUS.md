@@ -50,6 +50,44 @@ Không ghi một chức năng là `COMPLETED` nếu chưa kiểm tra source, bui
 
 ---
 
+## Current Repository State
+
+### Frontend
+
+- Status: UI_PROTOTYPE
+- Location: repository root
+- Source directory: `src/`
+- Framework: React 18 + TypeScript + Vite
+- Styling: Tailwind CSS
+- Routing: React Router with HashRouter
+- Data source: Mock and placeholder data
+- API integration: NOT_STARTED
+- Authentication: NOT_STARTED
+- Authorization: NOT_STARTED
+- Real AI integration: NOT_STARTED
+
+### Backend
+
+- Status: NOT_STARTED
+- Planned location: `backend/`
+- Planned stack: Java 21 + Spring Boot
+- API: NOT_STARTED
+- Tests: NOT_STARTED
+
+### Database
+
+- Status: NOT_STARTED
+- Planned database: PostgreSQL
+- Flyway migrations: NOT_STARTED
+
+### Important Note
+
+Existing frontend pages represent intended UI only.
+
+They do not prove that corresponding business functions are implemented.
+
+---
+
 # 4. Current Development Focus
 
 ```text

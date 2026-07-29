@@ -1,95 +1,83 @@
 ---
-description: Existing React frontend preservation and integration rules
+description: Existing React UI prototype preservation and integration rules
 globs:
-  - "frontend/**/*.ts"
-  - "frontend/**/*.tsx"
-  - "frontend/**/*.js"
-  - "frontend/**/*.jsx"
-  - "frontend/**/*.css"
-  - "frontend/**/*.scss"
-  - "frontend/**/*.json"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+  - "src/**/*.css"
+  - "src/**/*.scss"
+  - "package.json"
+  - "vite.config.ts"
+  - "tailwind.config.js"
+  - "tailwind.config.ts"
+  - "postcss.config.js"
+  - "index.html"
 alwaysApply: false
 ---
 
 # Frontend Rules
 
-## Existing Frontend
+## Frontend Status
 
-- The current frontend is a usable baseline.
-- Preserve the existing layout.
-- Preserve the existing navigation.
-- Preserve the existing theme.
-- Preserve existing working components.
-- Do not redesign a page when the task only requires API integration.
-- Do not replace a working component without a documented reason.
-- Reuse existing components before creating new components.
+- The current React application is a UI prototype.
+- It is a visual reference, not the source of truth for backend business logic.
+- Existing mock data does not define the final database schema.
+- Existing local component state does not define the final API contract.
+- Existing simulated AI responses do not define the real AI workflow.
+- Existing Admin and Expert screens do not mean those backend features already exist.
+
+## Existing Design
+
+- Preserve the existing theme, layout, navigation and reusable components when practical.
+- Do not redesign the whole application during a backend integration task.
+- Small UI changes are allowed when required by the approved API contract or business rules.
+- Reuse existing components before creating replacements.
+- Do not preserve mock behavior when it conflicts with approved requirements.
+
+## Source of Truth
+
+Use the following priority:
+
+1. Current task file.
+2. API Contract.
+3. Database Design.
+4. Safety and CBT Rules.
+5. Architecture.
+6. Existing frontend prototype.
+
+The frontend prototype must not override Safety, Security, Consent, ownership or CBT rules.
+
+## Mock Data
+
+- Treat all current data as placeholder data unless proven otherwise.
+- Do not present mock data as production data.
+- Do not silently mix mock data and real API data.
+- Replace mock data gradually according to the current integration task.
+- A page may remain MOCK_ONLY until its API task is completed.
 
 ## API Integration
 
 - Follow `docs/03_API_CONTRACT.yaml`.
-- Do not silently rename backend response fields.
-- Use the existing API client if one already exists.
-- Otherwise create one shared API client.
-- Do not call the backend directly from many unrelated components.
-- Do not hard-code the backend URL inside components.
-- Store environment-specific URLs in environment configuration.
-- Attach JWT using the shared authentication mechanism.
-- Handle `401 Unauthorized` consistently.
-- Handle `403 Forbidden` consistently.
+- Do not change the API contract only to preserve mock frontend data.
+- Use a shared API client.
+- Do not hard-code backend URLs in components.
+- Keep environment-specific URLs in environment configuration.
+- Define TypeScript DTOs matching the approved API contract.
+- Handle loading, empty, validation, error and retry states.
 
-## Data States
+## Authentication
 
-Every data-driven page must support applicable states:
-
-- Loading.
-- Empty.
-- Validation error.
-- API error.
-- Retry.
-- Disabled while submitting.
-- Success feedback.
-
-Do not display stale mock data after an API request fails.
-
-## Mock Data
-
-- Keep mock services replaceable.
-- Remove mock data only after the real API flow works.
-- Do not silently mix mock and real data.
-- The task file must state whether mock or real API is being used.
-- Mock DTOs must match the real OpenAPI contract.
-
-## TypeScript
-
-- Create TypeScript DTOs that match OpenAPI.
-- Do not use `any` for stable API contracts.
-- Keep enum values identical to backend values.
-- Do not duplicate the same DTO across many components.
-- Parse date-time values explicitly when needed.
-- Do not assume nullable fields are always present.
-
-## Forms
-
-- Validate required fields.
-- Show field-level validation where appropriate.
-- Prevent duplicate submissions.
-- Disable submit while processing.
-- Preserve user input when a recoverable request fails.
-
-## Security and Privacy
-
-- Do not log access tokens.
-- Do not log sensitive chat content.
-- Do not persist sensitive content in localStorage unless explicitly required.
-- Hidden buttons are not authorization.
-- Backend authorization remains mandatory.
-- Do not expose admin actions to normal users through route mistakes.
+- Current routes are not considered protected until real authentication is implemented.
+- Hidden navigation items are not authorization.
+- Backend remains responsible for authorization.
+- Protected routes must be added only in the relevant authentication integration task.
 
 ## Scope
 
-- Modify only pages, services and types required by the current task.
-- Do not perform broad frontend refactoring during a small integration task.
-- Do not replace the existing design system without approval.
-- Run type-check.
-- Run production build.
+- Modify only files required by the current task.
+- Do not perform broad refactoring while integrating one API.
+- Run:
+  - `npm run lint`
+  - `npm run build`
 - Report the exact command and actual result.
