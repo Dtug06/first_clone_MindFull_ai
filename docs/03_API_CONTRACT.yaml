@@ -1,0 +1,1152 @@
+openapi: 3.0.3
+
+info:
+  title: MindBridge AI API
+  version: 0.1.0
+  description: >
+    MVP API contract for MindBridge AI.
+    Task files have the highest priority for implementation details.
+    Any shared endpoint or DTO change must update this file first.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Consents
+  - name: Chat
+  - name: DailyCheckin
+  - name: Behavior
+  - name: Matching
+  - name: CBT
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /health:
+    get:
+      tags:
+        - Health
+      security: []
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      security: []
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /consents:
+    post:
+      tags:
+        - Consents
+      summary: Grant or revoke consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentEventRequest"
+      responses:
+        "201":
+          description: Consent event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentEventResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /consents/current:
+    get:
+      tags:
+        - Consents
+      summary: Get current consent states
+      responses:
+        "200":
+          description: Current consent states
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CurrentConsentResponse"
+
+  /chat/sessions:
+    post:
+      tags:
+        - Chat
+      summary: Create chat session
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatSessionRequest"
+      responses:
+        "201":
+          description: Chat session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    get:
+      tags:
+        - Chat
+      summary: List current user's chat sessions
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Chat session page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSessionPageResponse"
+
+  /chat/sessions/{sessionId}:
+    get:
+      tags:
+        - Chat
+      summary: Get chat session
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Chat session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSessionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /chat/sessions/{sessionId}/messages:
+    post:
+      tags:
+        - Chat
+      summary: Send user message
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Message stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    get:
+      tags:
+        - Chat
+      summary: List messages in a chat session
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Chat message page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessagePageResponse"
+
+  /daily-checkins/today:
+    get:
+      tags:
+        - DailyCheckin
+      summary: Get today's Daily Check-in assignments
+      responses:
+        "200":
+          description: Today's assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyQuestionAssignmentResponse"
+
+  /daily-checkins/{assignmentId}/answer:
+    post:
+      tags:
+        - DailyCheckin
+      summary: Submit Daily Check-in answer
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyAnswerRequest"
+      responses:
+        "201":
+          description: Answer submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyAnswerResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /behavior/daily-features:
+    get:
+      tags:
+        - Behavior
+      summary: Get daily behavior features
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily features
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserDailyFeatureResponse"
+
+  /behavior/profile:
+    get:
+      tags:
+        - Behavior
+      summary: Get current behavior profile
+      responses:
+        "200":
+          description: Current behavior profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserBehaviorProfileResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /matching/run:
+    post:
+      tags:
+        - Matching
+      summary: Run program matching
+      responses:
+        "201":
+          description: Matching completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchingDecisionResponse"
+        "409":
+          description: Matching blocked or data insufficient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /matching/latest:
+    get:
+      tags:
+        - Matching
+      summary: Get latest matching decision
+      responses:
+        "200":
+          description: Latest matching decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchingDecisionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /user-programs:
+    get:
+      tags:
+        - CBT
+      summary: List current user's programs
+      responses:
+        "200":
+          description: User programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserProgramResponse"
+
+  /user-programs/{userProgramId}/accept:
+    post:
+      tags:
+        - CBT
+      summary: Accept proposed program
+      parameters:
+        - $ref: "#/components/parameters/UserProgramId"
+      responses:
+        "200":
+          description: Program accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProgramResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /user-programs/{userProgramId}/progress:
+    get:
+      tags:
+        - CBT
+      summary: Get program progress
+      parameters:
+        - $ref: "#/components/parameters/UserProgramId"
+      responses:
+        "200":
+          description: Program progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProgramProgressResponse"
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    UserProgramId:
+      name: userProgramId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Access forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          example: UP
+        timestamp:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - displayName
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - user
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+        user:
+          $ref: "#/components/schemas/UserResponse"
+
+    UserResponse:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - role
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        createdAt:
+          type: string
+          format: date-time
+
+    ConsentEventRequest:
+      type: object
+      required:
+        - consentType
+        - action
+        - policyVersion
+      properties:
+        consentType:
+          $ref: "#/components/schemas/ConsentType"
+        action:
+          $ref: "#/components/schemas/ConsentAction"
+        policyVersion:
+          type: string
+
+    ConsentEventResponse:
+      allOf:
+        - $ref: "#/components/schemas/ConsentEventRequest"
+        - type: object
+          required:
+            - id
+            - occurredAt
+          properties:
+            id:
+              type: string
+              format: uuid
+            occurredAt:
+              type: string
+              format: date-time
+
+    CurrentConsentResponse:
+      type: object
+      required:
+        - consentType
+        - granted
+        - policyVersion
+        - updatedAt
+      properties:
+        consentType:
+          $ref: "#/components/schemas/ConsentType"
+        granted:
+          type: boolean
+        policyVersion:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateChatSessionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+          nullable: true
+
+    ChatSessionResponse:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ChatSessionStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ChatSessionPageResponse:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatSessionResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+
+    SendMessageRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+
+    ChatMessageResponse:
+      type: object
+      required:
+        - id
+        - sessionId
+        - role
+        - content
+        - createdAt
+        - analysisStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/MessageRole"
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        analysisStatus:
+          type: string
+          enum:
+            - NOT_REQUESTED
+            - PENDING
+            - SUCCEEDED
+            - FAILED
+
+    ChatMessagePageResponse:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessageResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+
+    DailyQuestionAssignmentResponse:
+      type: object
+      required:
+        - assignmentId
+        - templateCode
+        - questionType
+        - prompt
+        - assignedForDate
+        - answered
+      properties:
+        assignmentId:
+          type: string
+          format: uuid
+        templateCode:
+          type: string
+        questionType:
+          $ref: "#/components/schemas/DailyQuestionType"
+        prompt:
+          type: string
+        assignedForDate:
+          type: string
+          format: date
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyQuestionOptionResponse"
+        answered:
+          type: boolean
+
+    DailyQuestionOptionResponse:
+      type: object
+      required:
+        - value
+        - label
+        - orderIndex
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        orderIndex:
+          type: integer
+
+    DailyAnswerRequest:
+      type: object
+      required:
+        - answerType
+      properties:
+        answerType:
+          $ref: "#/components/schemas/DailyAnswerType"
+        numericValue:
+          type: number
+          nullable: true
+        textValue:
+          type: string
+          nullable: true
+        optionValue:
+          type: string
+          nullable: true
+
+    DailyAnswerResponse:
+      type: object
+      required:
+        - id
+        - assignmentId
+        - answeredAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        assignmentId:
+          type: string
+          format: uuid
+        answeredAt:
+          type: string
+          format: date-time
+
+    UserDailyFeatureResponse:
+      type: object
+      required:
+        - featureDate
+        - featureVersion
+      properties:
+        featureDate:
+          type: string
+          format: date
+        stressScore:
+          type: number
+          nullable: true
+        moodScore:
+          type: number
+          nullable: true
+        energyScore:
+          type: number
+          nullable: true
+        sleepHours:
+          type: number
+          nullable: true
+        anxietySignal:
+          type: number
+          nullable: true
+        engagementScore:
+          type: number
+          nullable: true
+        exerciseCompletionRate:
+          type: number
+          nullable: true
+        maxRiskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        explicitCoverage:
+          type: number
+          minimum: 0
+          maximum: 1
+        inferredConfidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        featureVersion:
+          type: string
+
+    UserBehaviorProfileResponse:
+      type: object
+      required:
+        - profileVersion
+        - windowEnd
+        - riskLevel
+        - dataCoverage
+        - confidence
+        - calculatedAt
+      properties:
+        profileVersion:
+          type: string
+        windowEnd:
+          type: string
+          format: date
+        stressAvg7d:
+          type: number
+          nullable: true
+        stressAvg30d:
+          type: number
+          nullable: true
+        moodAvg7d:
+          type: number
+          nullable: true
+        sleepAvg7d:
+          type: number
+          nullable: true
+        energyAvg7d:
+          type: number
+          nullable: true
+        anxietyAvg7d:
+          type: number
+          nullable: true
+        engagementScore:
+          type: number
+          nullable: true
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        dominantTopics:
+          type: array
+          items:
+            type: string
+        trendSummary:
+          type: object
+          additionalProperties:
+            type: string
+        dataCoverage:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        calculatedAt:
+          type: string
+          format: date-time
+
+    MatchingCandidateResponse:
+      type: object
+      required:
+        - programCode
+        - programVersionId
+        - finalScore
+        - eligible
+      properties:
+        programCode:
+          type: string
+        programVersionId:
+          type: string
+          format: uuid
+        finalScore:
+          type: number
+        eligible:
+          type: boolean
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        rejectionReasons:
+          type: array
+          items:
+            type: string
+
+    MatchingDecisionResponse:
+      type: object
+      required:
+        - matchingRunId
+        - decisionType
+        - candidates
+        - decidedAt
+      properties:
+        matchingRunId:
+          type: string
+          format: uuid
+        decisionType:
+          $ref: "#/components/schemas/MatchingDecisionType"
+        selectedProgramCode:
+          type: string
+          nullable: true
+        selectedProgramVersionId:
+          type: string
+          format: uuid
+          nullable: true
+        score:
+          type: number
+          nullable: true
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingCandidateResponse"
+        decidedAt:
+          type: string
+          format: date-time
+
+    UserProgramResponse:
+      type: object
+      required:
+        - id
+        - programCode
+        - programVersionId
+        - state
+        - proposedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        programCode:
+          type: string
+        programVersionId:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ProgramState"
+        proposedAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserProgramProgressResponse:
+      type: object
+      required:
+        - userProgramId
+        - programCode
+        - state
+        - completedExercises
+        - totalExercises
+        - completionRate
+      properties:
+        userProgramId:
+          type: string
+          format: uuid
+        programCode:
+          type: string
+        state:
+          $ref: "#/components/schemas/ProgramState"
+        currentModuleOrder:
+          type: integer
+          nullable: true
+        completedExercises:
+          type: integer
+        totalExercises:
+          type: integer
+        completionRate:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - timestamp
+      properties:
+        code:
+          type: string
+          example: CHAT_SESSION_NOT_FOUND
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+        requestId:
+          type: string
+        fieldErrors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+
+    FieldError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    UserRole:
+      type: string
+      enum:
+        - USER
+        - EXPERT
+        - ADMIN
+
+    UserStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - SUSPENDED
+        - DELETED
+
+    ConsentType:
+      type: string
+      enum:
+        - CHAT_ANALYSIS
+        - PERSONALIZATION
+        - EXPERT_SHARING
+
+    ConsentAction:
+      type: string
+      enum:
+        - GRANTED
+        - REVOKED
+
+    ChatSessionStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - CLOSED
+        - ARCHIVED
+
+    MessageRole:
+      type: string
+      enum:
+        - USER
+        - ASSISTANT
+        - SYSTEM
+
+    DailyQuestionType:
+      type: string
+      enum:
+        - SCALE
+        - SINGLE_CHOICE
+        - TEXT
+        - NUMBER
+
+    DailyAnswerType:
+      type: string
+      enum:
+        - NUMERIC
+        - TEXT
+        - OPTION
+
+    RiskLevel:
+      type: integer
+      minimum: 1
+      maximum: 4
+
+    MatchingDecisionType:
+      type: string
+      enum:
+        - SELECTED
+        - NO_MATCH
+        - DEFERRED
+        - EXPERT_REVIEW
+        - SAFETY_BLOCKED
+
+    ProgramState:
+      type: string
+      enum:
+        - PROPOSED
+        - ACCEPTED
+        - BASELINE
+        - ACTIVE
+        - PAUSED
+        - ESCALATED
+        - FINAL_ASSESSMENT
+        - COMPLETED
+        - MAINTENANCE
+        - WITHDRAWN

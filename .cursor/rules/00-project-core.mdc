@@ -1,0 +1,35 @@
+---
+description: Core MindBridge AI project constraints
+alwaysApply: true
+---
+
+# MindBridge AI Core Rules
+
+- Work only on the current task file under `docs/tasks/`.
+- The current task file is the highest-priority requirement.
+- Follow `docs/03_API_CONTRACT.yaml` for endpoint and DTO field names.
+- Follow `docs/02_DATABASE_MVP.md` for database scope and invariants.
+- Follow `docs/01_ARCHITECTURE.md` for module boundaries.
+- Preserve the existing frontend design unless the task explicitly requires a UI change.
+- Do not invent product requirements.
+- Do not invent clinical thresholds.
+- Do not invent CBT content.
+- Do not invent Safety policy.
+- Do not invent data access policy.
+- Do not implement diagnosis.
+- Do not claim clinical certainty.
+- Do not train or fine-tune an AI model.
+- Do not introduce Microservices, Kubernetes or unrelated infrastructure.
+- Make the smallest complete change that satisfies the current task.
+- Do not refactor unrelated modules.
+- Reuse current project patterns before creating new abstractions.
+- Report conflicts or missing information before changing behavior.
+- Never commit secrets, API keys, tokens or passwords.
+- Never claim a test passed unless the command was actually executed.
+- Report the exact verification command and observed result.
+- Update OpenAPI when a shared API contract changes.
+- Update implementation status after completing a task.
+- Keep code understandable for a two-developer university team.
+- Prefer simple and explicit code over generic frameworks.
+- Avoid premature abstraction.
+- When uncertain, stop and report the uncertainty instead of silently assuming.

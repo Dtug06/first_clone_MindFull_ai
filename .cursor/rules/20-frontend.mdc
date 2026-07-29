@@ -1,0 +1,95 @@
+---
+description: Existing React frontend preservation and integration rules
+globs:
+  - "frontend/**/*.ts"
+  - "frontend/**/*.tsx"
+  - "frontend/**/*.js"
+  - "frontend/**/*.jsx"
+  - "frontend/**/*.css"
+  - "frontend/**/*.scss"
+  - "frontend/**/*.json"
+alwaysApply: false
+---
+
+# Frontend Rules
+
+## Existing Frontend
+
+- The current frontend is a usable baseline.
+- Preserve the existing layout.
+- Preserve the existing navigation.
+- Preserve the existing theme.
+- Preserve existing working components.
+- Do not redesign a page when the task only requires API integration.
+- Do not replace a working component without a documented reason.
+- Reuse existing components before creating new components.
+
+## API Integration
+
+- Follow `docs/03_API_CONTRACT.yaml`.
+- Do not silently rename backend response fields.
+- Use the existing API client if one already exists.
+- Otherwise create one shared API client.
+- Do not call the backend directly from many unrelated components.
+- Do not hard-code the backend URL inside components.
+- Store environment-specific URLs in environment configuration.
+- Attach JWT using the shared authentication mechanism.
+- Handle `401 Unauthorized` consistently.
+- Handle `403 Forbidden` consistently.
+
+## Data States
+
+Every data-driven page must support applicable states:
+
+- Loading.
+- Empty.
+- Validation error.
+- API error.
+- Retry.
+- Disabled while submitting.
+- Success feedback.
+
+Do not display stale mock data after an API request fails.
+
+## Mock Data
+
+- Keep mock services replaceable.
+- Remove mock data only after the real API flow works.
+- Do not silently mix mock and real data.
+- The task file must state whether mock or real API is being used.
+- Mock DTOs must match the real OpenAPI contract.
+
+## TypeScript
+
+- Create TypeScript DTOs that match OpenAPI.
+- Do not use `any` for stable API contracts.
+- Keep enum values identical to backend values.
+- Do not duplicate the same DTO across many components.
+- Parse date-time values explicitly when needed.
+- Do not assume nullable fields are always present.
+
+## Forms
+
+- Validate required fields.
+- Show field-level validation where appropriate.
+- Prevent duplicate submissions.
+- Disable submit while processing.
+- Preserve user input when a recoverable request fails.
+
+## Security and Privacy
+
+- Do not log access tokens.
+- Do not log sensitive chat content.
+- Do not persist sensitive content in localStorage unless explicitly required.
+- Hidden buttons are not authorization.
+- Backend authorization remains mandatory.
+- Do not expose admin actions to normal users through route mistakes.
+
+## Scope
+
+- Modify only pages, services and types required by the current task.
+- Do not perform broad frontend refactoring during a small integration task.
+- Do not replace the existing design system without approval.
+- Run type-check.
+- Run production build.
+- Report the exact command and actual result.

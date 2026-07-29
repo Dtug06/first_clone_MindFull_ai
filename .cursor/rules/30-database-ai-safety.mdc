@@ -1,0 +1,128 @@
+---
+description: Database, AI, behavior analysis, CBT and Safety constraints
+globs:
+  - "backend/src/main/resources/db/migration/**"
+  - "backend/**/analysis/**"
+  - "backend/**/safety/**"
+  - "backend/**/behavior/**"
+  - "backend/**/cbt/**"
+  - "backend/**/matching/**"
+  - "docs/02_DATABASE_MVP.md"
+  - "docs/03_API_CONTRACT.yaml"
+alwaysApply: false
+---
+
+# Database Rules
+
+- Every schema change requires a new Flyway migration.
+- Never edit a migration that has been merged or applied.
+- Do not create tables outside the current task scope.
+- Do not create all target tables in one migration.
+- Use PostgreSQL-compatible SQL.
+- Use UUID primary keys unless the task explicitly states otherwise.
+- Store timestamps as UTC `timestamptz`.
+- Add foreign keys deliberately.
+- Add unique constraints deliberately.
+- Add check constraints for stable invariants.
+- Add indexes only for known query patterns.
+- Do not use JSONB as a replacement for every typed field.
+- Frequently queried metrics must use typed columns.
+- Do not hard-delete sensitive history without an approved retention rule.
+- Do not trust client-provided user identity.
+- Test migrations from an empty database.
+
+# AI Analysis Rules
+
+- The system uses a hosted pretrained LLM.
+- Do not train or fine-tune a model.
+- Provide a Mock Provider for local development and automated tests.
+- Provide a Real Provider only behind configuration.
+- LLM output must be validated against a structured schema.
+- Invalid or incomplete output must not be stored as a successful result.
+- Store:
+  - provider
+  - model
+  - prompt version
+  - schema version
+  - status
+  - latency
+  - token usage when available
+  - error metadata
+- Do not overwrite previous analysis results.
+- Reprocessing creates a new analysis run.
+- Explicit user answers have higher priority than inferred signals.
+- LLM does not make the final CBT matching decision.
+- Do not log unnecessary raw prompts or raw responses containing sensitive data.
+- External API calls must have timeout.
+- Retry must be limited.
+- Automated tests must not depend on the real provider.
+
+# Behavior Analysis Rules
+
+- MVP behavior analysis uses deterministic calculations.
+- Use SQL aggregation and Java calculation.
+- Do not add a machine-learning model without a separate approved task.
+- Every derived feature must have a calculation version.
+- Store coverage with derived data.
+- Store confidence with inferred data.
+- Do not produce long-term conclusions from a single day.
+- Explicit data must be distinguishable from inferred data.
+- Behavior Profile Snapshot used by Matching is immutable.
+- Results must be described as observed signals or trends.
+- Do not present behavior analysis as diagnosis.
+
+# Safety Rules
+
+- Safety evaluation is separate from conversational response generation.
+- Risk Level 3 blocks automated Program Matching.
+- Risk Level 4 blocks automated Program Matching.
+- Risk Level 4 uses a fixed approved response.
+- Do not use free-form LLM generation for a Level 4 emergency response.
+- Safety Event must retain its source.
+- Store enough reason information to audit the final risk level.
+- Do not invent crisis wording.
+- Do not invent thresholds.
+- Do not invent escalation policy.
+- Missing expert-approved values must use:
+  - TODO_EXPERT_REVIEW
+  - CONFIG_PLACEHOLDER
+  - DEMO_ONLY
+- Safety history should be append-only where practical.
+- Test behavior for Level 1, Level 2, Level 3 and Level 4.
+- Do not silently downgrade a model risk signal.
+
+# CBT Rules
+
+- Program Version is immutable.
+- Module Version is immutable.
+- Exercise Version is immutable.
+- Updating approved content creates a new version.
+- User Program references the exact Program Version accepted.
+- Exercise Assignment references the exact Exercise Version assigned.
+- State transitions must be validated.
+- Every state transition must be recorded in `program_state_transitions`.
+- `program_reviews` must not replace state-transition history.
+- LLM must not invent CBT exercises.
+- LLM must not modify approved CBT structure.
+- Demo content must be labeled as DEMO_ONLY.
+- Do not unlock a module unless the defined conditions are satisfied.
+
+# Program Matching Rules
+
+- Program Matching is deterministic and rule-based for the MVP.
+- Always execute the Safety Gate before candidate evaluation.
+- Save every evaluated candidate.
+- Do not save only the winning candidate.
+- Save:
+  - eligibility result
+  - exclusion result
+  - score components
+  - final score
+  - reason codes
+  - rejection reasons
+- Save the exact Profile Snapshot.
+- Save the rule version.
+- Save the threshold bundle version.
+- Do not hard-code unapproved clinical values.
+- The final decision must be explainable from persisted data.
+- LLM may help explain an existing decision but must not create the decision.

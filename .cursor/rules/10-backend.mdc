@@ -1,0 +1,114 @@
+---
+description: Spring Boot backend rules for MindBridge AI
+globs:
+  - "backend/**/*.java"
+  - "backend/**/*.yml"
+  - "backend/**/*.yaml"
+  - "backend/**/*.properties"
+  - "backend/**/pom.xml"
+alwaysApply: false
+---
+
+# Backend Rules
+
+## Technology
+
+- Use Java 21.
+- Follow the existing Spring Boot version.
+- Follow current project conventions.
+- Use Maven and the existing Maven Wrapper.
+- Do not add a dependency without explaining why it is required.
+- Do not replace an existing dependency without approval.
+
+## Layering
+
+- Controllers must remain thin.
+- Controllers must not contain business calculations.
+- Controllers must not contain matching rules.
+- Controllers must not contain CBT state transitions.
+- Services own business logic.
+- Services own transaction boundaries.
+- Repositories only access persistence.
+- Do not expose JPA entities directly through REST APIs.
+- Use explicit request DTOs.
+- Use explicit response DTOs.
+- Mappers only perform mapping.
+- Mappers must not contain business rules.
+
+## Validation
+
+- Validate external input using Bean Validation where appropriate.
+- Re-check business invariants inside the service.
+- Reject invalid enum values.
+- Reject access to resources owned by another user.
+- Do not trust a client-provided `userId`.
+- Use the authenticated principal as the current user identity.
+
+## Error Handling
+
+- Follow the shared ErrorResponse format in OpenAPI.
+- Use stable error codes.
+- Do not expose stack traces.
+- Do not expose SQL details.
+- Do not expose internal class names.
+- Map expected business errors to appropriate HTTP status codes.
+
+## Security
+
+- Every user-scoped resource requires ownership verification.
+- Role checks do not replace ownership checks.
+- USER must not read another user's data.
+- EXPERT must not automatically access all user data.
+- Do not log passwords.
+- Do not log JWTs.
+- Do not log API keys.
+- Do not log full sensitive chat content.
+- Do not log full sensitive exercise submissions.
+- Read secrets from environment configuration.
+- Never hard-code secret values.
+
+## Transactions
+
+- A transaction should cover one complete local business action.
+- Do not keep a database transaction open during a slow external LLM call.
+- Use explicit processing statuses where appropriate:
+  - PENDING
+  - SUCCEEDED
+  - FAILED
+- Avoid hidden side effects in getters.
+- Avoid hidden side effects in mappers.
+- Avoid unnecessary entity lifecycle callbacks.
+
+## API Contract
+
+- Follow `docs/03_API_CONTRACT.yaml`.
+- Do not silently rename request or response fields.
+- Update OpenAPI before changing a shared endpoint contract.
+- Use UTC timestamps.
+- Return ISO-8601 date-time values.
+- Follow the shared pagination response structure.
+- Do not return internal database-only fields without a clear requirement.
+
+## Testing
+
+- Add unit tests for business rules.
+- Add integration tests for critical REST APIs.
+- Add integration tests for persistence constraints.
+- Test successful access.
+- Test unauthenticated access.
+- Test forbidden cross-user access.
+- Use Mock AI Provider in normal automated tests.
+- Real LLM tests require an explicit environment flag.
+- Run relevant Maven commands.
+- Report the exact command and result.
+
+## Code Quality
+
+- Prefer explicit domain services.
+- Avoid unnecessary generic managers.
+- Avoid unnecessary helper classes.
+- Avoid unnecessary `ServiceImpl` classes when there is only one implementation.
+- Avoid reflection-heavy solutions.
+- Keep methods focused.
+- Do not refactor unrelated packages.
+- Do not change naming conventions during an unrelated task.
