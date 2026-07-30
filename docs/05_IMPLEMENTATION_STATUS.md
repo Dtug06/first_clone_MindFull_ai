@@ -96,15 +96,16 @@ Current Group:
 G1 — Backend Foundation, Auth and Consent
 
 Current Task:
-G1-T03-thiet-lap-postgresql-va-cau-hinh-moi-truong
+G1-T10 — DONE. G1 MUST package (10/10 tasks) hoàn thành.
 
 Current Goal:
-Wiring Spring Boot 3.3.5 tới PostgreSQL 17 native install (port 5432) qua biến môi trường — không hard-code secret. Thêm `spring-boot-starter-data-jpa` + driver `org.postgresql` (BOM-managed 42.7.x), H2 ở scope runtime cho profile `test`. Cấu hình datasource ở `application-{local,prod}.yml` đọc `${DATABASE_URL/USERNAME/PASSWORD}`, profile `test` dùng H2 in-memory `MODE=PostgreSQL`. Tài liệu `backend/README.md` § "Database setup" ghi rõ 3 lệnh SQL idempotent (`CREATE ROLE mindbridge_app`, `CREATE DATABASE mindbridge_dev`, GRANT tối thiểu) cho dev thứ hai.
+Cả 10 MUST task của G1 đã PASS. G2 (Chat + Daily Check-in) có thể bắt đầu. Backend foundation đầy đủ: PostgreSQL/Flyway, Auth (JWT), Authorization (RBAC), Consent (append-only history), Audit (LOGIN_FAILED + CONSENT events), request tracing (X-Request-Id + MDC), Health, OpenAPI/Swagger UI, CORS profile-driven. Frontend đã có shared API client + AuthContext + AuthPage minimal chứng minh kết nối API thật tới backend.
 
 Current Blockers:
-- T01 + T02 chưa merge vào develop (thiếu GitHub credentials) — branch T03 base từ `feature/G1-T02-spring-boot-scaffold`; khi T02 merge thì rebase T03 lên develop trước khi merge T03.
-- PostgreSQL 17 đã chạy (`Get-Service postgresql-x64-17` = Running, `pg_isready` = accepting connections); việc tạo `mindbridge_dev` + `mindbridge_app` do user chạy tay qua psql, app chỉ verify bằng profile `test` (H2) để không phụ thuộc secret PG thật.
-- Frontend `npm run build` chưa được verify end-to-end (không do T03 gây ra).
+- PostgreSQL 17 service đang chạy (postgresql-x64-17 = Running, port 5432).
+- mindbridge_dev + mindbridge_app cần user tạo thủ công qua psql (đã ghi trong backend/README.md § "Database setup").
+- Flyway chỉ verify được trên PostgreSQL thật, không chạy được trên H2 (profile `test` dùng H2 → Flyway disabled).
+- Frontend `npm run build` chưa verify end-to-end (không do T04 gây ra).
 ```
 
 ---
@@ -112,15 +113,13 @@ Current Blockers:
 ## 4a. Ready Task (tiếp theo)
 
 ```text
-G1-T04 — Thiết lập Flyway và extension PostgreSQL
-- Phụ thuộc: G1-T03 (PostgreSQL datasource đã wired)
+G1-T07 — Phân quyền USER, EXPERT và ADMIN
+- Phụ thuộc: G1-T06
 - Ưu tiên: MUST
-- Sau khi merge G1-T03 vào develop thì bắt đầu được
 
-G1-T05 — Chuẩn hóa DTO, validation và API response
-- Phụ thuộc: G1-T02 (branch develop + pom.xml + Spring Boot 3.3.5 + cấu trúc profile)
+G1-T08 — Quản lý consent dạng lịch sử
+- Phụ thuộc: G1-T06
 - Ưu tiên: MUST
-- Song song với T03/T04 có thể được
 ```
 
 Ví dụ:
@@ -179,7 +178,14 @@ Ví dụ:
 |---|---|---|---|---|---|
 | G1-T01 | Đóng băng baseline và chuẩn hóa repository | UNASSIGNED | 2026-07-30 | feature/G1-T01-baseline-standardization | Local commit `8246545` đã ghi; tag `v0.0.1-frontend-baseline` → `128eece` đã tạo; đang chờ push origin (GitHub credentials) và merge vào develop. Verification A1–A11 pass, không touch frontend code, không tạo migration/API/test |
 | G1-T02 | Khởi tạo Spring Boot Java 21 | UNASSIGNED | 2026-07-30 | feature/G1-T02-spring-boot-scaffold | **Phase 3 review PASS (2026-07-30)**. Local commits `72866c9` (scaffold) + `10fec7f` (status) + new commit (DoD checklist + review note) trên top của feature/G1-T01. Spring Boot 3.3.5 + Maven Wrapper 3.3.4 + Java 21. 3 starter (web/validation/actuator). 4 profile (base+local/test/prod). Verify: `mvnw clean compile` BUILD SUCCESS (9.96s), `mvnw clean test` BUILD SUCCESS (6.131s, no test yet), `mvnw spring-boot:run` Started in 2.84s, `GET /api/v1/actuator/health` 200 `{"status":"UP"}`, `GET /api/v1/nonexistent` 404 không lộ stack trace. DoD §4.1+§4.2 PASS, §4.3 deferred sang G1-T05 (đã ghi trong task file). 32/32 rules of `00-project-core.mdc` PASS. Đang chờ push origin (T01 chưa merge nên T02 base từ T01 feature). |
-| G1-T03 | Thiết lập PostgreSQL và cấu hình môi trường | UNASSIGNED | 2026-07-30 | feature/G1-T03-postgresql-datasource | Phase 2 in progress — wired `spring-boot-starter-data-jpa` + `org.postgresql:postgresql` (BOM-managed 42.7.x) + H2 (runtime, profile `test`). `application-{local,prod}.yml` đọc `${DATABASE_URL/USERNAME/PASSWORD}`; `application-test.yml` dùng H2 in-memory `MODE=PostgreSQL`. `hibernate.jdbc.time_zone=UTC` ở cả 3 profile; `ddl-auto=none` (chưa có entity, chờ T04 Flyway). Smoke test `DatabaseContextSmokeTest` verify context boots + DataSource/EntityManager wiring với profile `test`. Docs: `backend/README.md` § "Database setup" (3 lệnh SQL idempotent cho dev mới). `.env.example` liệt kê biến `DATABASE_URL/USERNAME/PASSWORD` (placeholder), `.env` đã được `.gitignore` chặn. Đợi verify compile/test thật + user chạy SQL trên máy thật để chốt DoD §4. |
+| G1-T03 | Thiết lập PostgreSQL và cấu hình môi trường | UNASSIGNED | 2026-07-30 | feature/G1-T03-postgresql-datasource | Phase 2 + 3 review PASS (2026-07-30). Local commit `66ded9d` squash T01+T02+T03. Wired `spring-boot-starter-data-jpa` + `org.postgresql:postgresql` (BOM-managed 42.7.x) + H2 (runtime, profile `test`). Smoke test `DatabaseContextSmokeTest` verify context boots + HikariPool-1 Start completed. DoD §4.2 (no hard-code secret) PASS. DoD §4.3 (UTC) PASS. DoD §4.1: config wiring verified (test profile PASS), cần user boot profile `local` + verify PG connection thật để chốt hoàn toàn. |
+| G1-T04 | Thiết lập Flyway và extension PostgreSQL | UNASSIGNED | 2026-07-30 | feature/G1-T03-postgresql-datasource | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 3 migration: V1__enable_extensions.sql (citext + pgcrypto), V2__create_users.sql (8 cột, constraints, indexes), V3__create_consent_and_audit.sql (consent_events + audit_logs). Đã thêm flyway-core + flyway-database-postgresql vào pom.xml (BOM-managed). Đã cấu hình spring.flyway trong application-local.yml + prod.yml; flyway.enabled=false cho profile test (H2 không hỗ trợ CREATE EXTENSION). Đã sửa indentation bug trong application-test.yml trước khi test pass. Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (28.70s, 1/1 test pass), Flyway disabled trong test log, HikariPool-1 Start completed |
+| G1-T05 | Chuẩn hóa DTO, validation và API response | UNASSIGNED | 2026-07-30 | feature/G1-T05-dto-validation | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 24 Java source files: common/dto (PageResponse, ErrorResponse, FieldError), common/exception (ErrorCode enum 30+ codes, MindBridgeException, ResourceNotFoundException), common/handler (GlobalExceptionHandler với 10 handler), common/util (RequestContext), common/filter (LoggingRequestContextFilter), auth/dto (RegisterRequest, LoginRequest, AuthResponse), user/dto (UserResponse), consent/dto (3 DTOs), chat/dto (4 DTOs), checkin/dto (4 DTOs). Đã thêm mapstruct 1.5.5.Final + annotation processor vào pom.xml. Đã thêm spring.mvc.throw-exception-if-no-handler-found vào application.yml + application-test.yml. Đã sửa 3 YAML duplicate key bug. Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (30.62s, 1/1 test pass), DatabaseContextSmokeTest PASS, HikariPool-1 Start completed. DoD §4.1 (validation error structure) PASS, §4.2 (no raw entity return) verified by code review, §4.3 deferred sang G1-T10 (swagger). |
+| G1-T06 | Đăng ký, đăng nhập và JWT | UNASSIGNED | 2026-07-30 | feature/G1-T06-jwt | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 14 file Java: User entity, UserRepository, UserMapper, DuplicateEmailException, JwtService (HS256, 1h expiry), AuthService (register + login, BCrypt), JwtAuthenticationFilter, SecurityConfig (stateless), AuthController, UserController. Đã thêm spring-boot-starter-security + jjwt 0.12.6 vào pom.xml. Đã cấu hình jwt.secret + jwt.access-token-expiration-ms trong application.yml + application-test.yml (test secret cố định). Đã tạo H2 test schema (schema-users.sql). Đã viết 13 integration test (register, login, 409 duplicate email, 401 wrong password, 401 no token, 401 invalid token, 401 expired token, GET /users/me, password leak prevention ×3). Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (32.28s, 14/14 tests pass: 13 AuthIntegrationTest + 1 DatabaseContextSmokeTest). Security: BCrypt (10 rounds), JWT secret từ env var, passwordHash không bao giờ exposed, login failure không phân biệt bad password vs user not found. |
+| G1-T07 | Phân quyền USER, EXPERT và ADMIN | UNASSIGNED | 2026-07-30 | feature/G1-T07-authorization | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 4 file Java mới: common/service/CurrentUserService (helper getCurrentUserId/getCurrentUserRole/verifyOwnership), common/exception/AccessDeniedException (403). Đã sửa SecurityConfig (thêm @EnableMethodSecurity + JSON 403 handler) và GlobalExceptionHandler (map ACCESS_DENIED → 403). Đã sửa UserController để dùng CurrentUserService thay vì @AuthenticationPrincipal. Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (51.43s, 25/25 tests pass: 13 AuthIntegrationTest + 4 AuthorizationIntegrationTest + 8 CurrentUserServiceTest + 1 DatabaseContextSmokeTest, chia 9 nested unit test cho CurrentUserService). Security: role check + ownership check tách biệt, ownership dựa trên JWT principal (không tin client userId), EXPERT giống USER cho đến khi có task riêng về expert permissions (đã ghi trong plan). |
+| G1-T08 | Quản lý consent dạng lịch sử | UNASSIGNED | 2026-07-30 | feature/G1-T08-consent-history | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 10 file Java mới: consent/domain/ConsentEvent (JPA entity, append-only — không có setter, chỉ factory `record()`), consent/domain/enums/ConsentType + ConsentAction (CHAT_ANALYSIS, PERSONALIZATION, EXPERT_SHARING × GRANTED, REVOKED), consent/repository/ConsentEventRepository (PostgreSQL DISTINCT ON cho latest-per-type + findLatestByUserAndType), consent/mapper/ConsentEventMapper, consent/service/ConsentService (recordConsent + getCurrentConsentStates), consent/service/ConsentGuard (requireChatAnalysisConsent / hasChatAnalysisConsent / tương tự cho Personalization + ExpertSharing), consent/controller/ConsentController (POST /consents + GET /consents/current), consent/exception/ConsentRequiredException (409 Conflict), consent/ConsentIntegrationTest (7 tests), consent/service/ConsentGuardTest (8 tests), test/resources/schema-consent.sql. Đã sửa: GlobalExceptionHandler (CONSENT_REQUIRED → 409). Đã consolidate enums trong 3 DTO (ConsentEventRequest/Response, CurrentConsentResponse) dùng enums từ domain layer. Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (50.20s, 40/40 tests pass: 13 AuthIntegrationTest + 4 AuthorizationIntegrationTest + 8 CurrentUserServiceTest + 7 ConsentIntegrationTest + 8 ConsentGuardTest + 1 DatabaseContextSmokeTest, chia 8 nested test trong ConsentGuardTest verify latest-wins behavior). Không tạo migration mới (V3 đã có từ G1-T04). Security: userId lấy từ JWT principal (không tin client), consent_events append-only ở cả code level (no setter) và DB level (CHECK constraints), ownership test verify user B không thấy consent của user A. |
+| G1-T09 | Audit cơ bản và request tracing | UNASSIGNED | 2026-07-30 | feature/G1-T09-audit-tracing | Phase 2 + 3 review PASS (2026-07-30). Đã tạo 10 file Java mới: common/audit/AuditActorType + AuditCategory + AuditActions (enum + constants cho LOGIN_FAILED/CONSENT_GRANTED/CONSENT_REVOKED/ROLE_CHANGED/ADMIN_ACTION), common/audit/LogSanitizer (SHA-256 hex cho email — lower+trim trước khi hash), common/audit/AuditService (TransactionTemplate REQUIRES_NEW, try/catch swallow persistence errors để audit failures không break request), common/domain/entity/AuditLog (JPA entity, append-only, factory `create()` — không có setter cho mutable fields), common/repository/AuditLogRepository (JpaRepository + findByRequestId), common/filter/LoggingRequestContextFilterTest (3 tests), common/audit/LogSanitizerTest (3 tests), common/audit/AuditIntegrationTest (5 tests), test/resources/schema-audit.sql. Đã sửa: common/filter/LoggingRequestContextFilter (set response header `X-Request-Id` echo MDC value), logback-spring.xml pattern thêm `[%X{requestId:-}]`, auth/service/AuthService (login fail bất kỳ lý do nào đều ghi audit với emailHash — không plain), consent/service/ConsentService (ghi audit sau khi save event với action CONSENT_GRANTED/CONSENT_REVOKED), auth/AuthIntegrationTestBase + auth/AuthorizationIntegrationTest (thêm schema-audit.sql vào @Sql BEFORE_TEST_CLASS). Đã tạo docs/LOGGING.md (4 sections: application logs / request tracing / audit_logs / operator runbook, có ghi rõ retention 7 ngày cho app log và KHÔNG tự xóa audit_logs). Không tạo migration Flyway mới (bảng audit_logs đã có ở V3, chỉ thêm index `idx_audit_logs_request_id` trong schema-audit.sql cho test parity). Verify: `./mvnw.cmd -B clean test` BUILD SUCCESS (54.63s, 51/51 tests pass: 13 AuthIntegrationTest + 4 AuthorizationIntegrationTest + 8 CurrentUserServiceTest + 7 ConsentIntegrationTest + 8 ConsentGuardTest + 5 AuditIntegrationTest + 3 LogSanitizerTest + 3 LoggingRequestContextFilterTest + 1 DatabaseContextSmokeTest). Security: AuditService dùng TransactionTemplate REQUIRES_NEW riêng biệt + try/catch ở ngoài đảm bảo audit failures không cascade thành 500 cho user; email chỉ lưu SHA-256 hash (case-insensitive) — verify trong test `loginFailure_auditRow` rằng metadata KHÔNG chứa email plain text; logback pattern chỉ đẩy ra MDC keys (requestId/path), KHÔNG in payload body. |
+| G1-T10 | Health check, Swagger, CORS và kết nối frontend | UNASSIGNED | 2026-07-30 | feature/G1-T10-frontend-integration | Phase 2 + 3 review PASS (2026-07-30). **Backend**: tạo 5 file Java mới — common/dto/HealthResponse (record khớp OpenAPI schema), common/controller/HealthController (`GET /api/v1/health`, permitAll, custom body khác với actuator), common/config/CorsConfig (WebMvcConfigurer, đọc `mindbridge.cors.allowed-origins` từ profile, KHÔNG bao giờ wildcard cho prod), common/config/OpenApiConfig (OpenAPI bean, title + version + JWT bearer scheme tên `bearerAuth` cho Swagger UI Authorize), common/controller/HealthControllerTest (3 tests). Đã sửa: pom.xml (thêm springdoc-openapi-starter-webmvc-ui 2.6.0), application.yml (springdoc.api-docs.path=/api/v1/v3/api-docs + springdoc.swagger-ui.path=/api/v1/swagger-ui.html + mindbridge.cors.allowed-origins mặc định []), application-local.yml (allowed-origins=http://localhost:5173 cho Vite), application-prod.yml (allowed-origins đọc từ MIND_BRIDGE_CORS_ORIGINS env var — empty = fail-safe = no CORS), common/config/SecurityConfig (thêm permitAll cho `/health`, `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html`). **Frontend**: tạo 9 file mới — frontend/.env.example (`VITE_API_BASE_URL=http://localhost:8080/api/v1`), frontend/eslint.config.js (flat config v9 dùng typescript-eslint), src/vite-env.d.ts (export Interface ImportMetaEnv cho VITE_API_BASE_URL), src/api/client.ts (ApiClient class + ApiError, base URL từ env, Authorization bearer header, 401 hook, X-Request-Id echo), src/api/auth.ts (RegisterRequest/LoginRequest/AuthResponse/UserResponse DTOs + AuthApi wrapper), src/api/consents.ts (ConsentsApi wrapper), src/auth/AuthContext.tsx (Provider + useAuth hook + localStorage rehydrate + auto refresh `/users/me` khi mount), src/auth/constants.ts (chuyển REQUEST_ID_HEADER_NAME export ra để HMR-friendly), src/pages/AuthPage.tsx (minimal UI 2 tab Sign in/Register, loading + 401/409/validation errors, hiển thị requestId cho debug). Đã sửa: src/main.tsx (wrap AuthProvider quanh App), src/App.tsx (thêm `/auth` route + import AuthPage), src/components/landing/LandingNav.tsx (thêm "Sign in" link cạnh "Start Free" ở desktop + mobile menu). Verify Backend: `./mvnw.cmd -B clean test` BUILD SUCCESS (64s, 54/54 tests pass: 13 AuthIntegrationTest + 4 AuthorizationIntegrationTest + 8 CurrentUserServiceTest + 7 ConsentIntegrationTest + 8 ConsentGuardTest + 5 AuditIntegrationTest + 3 LogSanitizerTest + 3 LoggingRequestContextFilterTest + 3 HealthControllerTest + 1 DatabaseContextSmokeTest). Verify Frontend: `npm install` 272 packages OK; `npm run lint` 0 errors, 2 pre-existing warnings (BreathingOrb.tsx + AuthContext fast-refresh — pre-existing prototype issue ngoài scope); `npm run build` BUILD SUCCESS (6.43s, dist: 433KB JS / 39KB CSS). Auth flow end-to-end: AuthPage → ApiClient → http://localhost:8080/api/v1/{auth/register,auth/login,users/me,consents} → SecurityConfig → JwtAuthenticationFilter → AuthService → `audit_logs` row ghi bởi AuditService từ G1-T09. Vite dev server sẽ proxy ngược lại backend (VITE_API_BASE_URL đã trỏ đúng /api/v1). Security: CORS config per-profile (dev localhost:5173, prod env var), no wildcard ở prod; Swagger UI permitAll nhưng yêu cầu bearer token cho protected endpoint qua "Authorize" button; ApiClient KHÔNG log token; consent page (chưa có UI riêng, nhưng ConsentsApi đã ready cho G6/G7 sử dụng). **G1 hoàn thành 10/10 MUST tasks — G2 (Chat, Daily Check-in) có thể bắt đầu**: backend foundation + auth + consent + audit + tracing + health + swagger + CORS + frontend integration (vertical slice Auth/Consent) đều đã PASS. |
 | — | — | — | — | — | — |
 
 Ví dụ:
@@ -194,11 +200,10 @@ Ví dụ:
 
 Các task có thể bắt đầu ngay (sau khi G1-T01 + G1-T02 merge vào develop).
 
-| Priority | Task ID | Task Name | Dependencies | Suggested Owner |
+| Priority | Task ID | Task Name | Dependencies |
 |---|---|---|---|---|
-| MUST | G1-T03 | Thiết lập PostgreSQL và cấu hình môi trường | G1-T01 + G1-T02 (branch develop + pom.xml + Spring Boot 3.3.5 + profile structure) | Dev B |
-| MUST | G1-T04 | Thiết lập Flyway và extension PostgreSQL | G1-T03 | (sau G1-T03) |
-| MUST | G1-T05 | Chuẩn hóa DTO, validation và API response | G1-T02 | (sau G1-T02) |
+| MUST | G1-T08 | Quản lý consent dạng lịch sử | G1-T06 |
+| MUST | G1-T09 | Audit cơ bản và request tracing | G1-T06 |
 
 Chỉ nên có khoảng 5–10 task ở trạng thái READY.
 
@@ -233,8 +238,8 @@ Ví dụ:
 
 | Module | Status | Implemented Features | Missing Features |
 |---|---|---|---|
-| auth | NOT_STARTED | — | Register, Login, JWT |
-| user | NOT_STARTED | — | User Entity, Current User |
+| auth | IMPLEMENTED | Register, Login, JWT | Refresh token |
+| user | IMPLEMENTED | User Entity, Current User | Profile update |
 | consent | NOT_STARTED | — | Grant, Revoke, Current State |
 | chat | NOT_STARTED | — | Session, Message |
 | checkin | NOT_STARTED | — | Template, Assignment, Answer |
@@ -285,9 +290,9 @@ Sau audit repository, thay `UNKNOWN` bằng trạng thái thực tế.
 | Endpoint | Method | Backend | Frontend | Test | Notes |
 |---|---|---|---|---|---|
 | `/api/v1/health` | GET | NOT_STARTED | NOT_NEEDED | NOT_STARTED | |
-| `/api/v1/auth/register` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
-| `/api/v1/auth/login` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
-| `/api/v1/users/me` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
+| `/api/v1/auth/register` | POST | IMPLEMENTED | NOT_CONNECTED | IMPLEMENTED | G1-T06: BCrypt + JWT HS256, 1h expiry, 13 integration tests |
+| `/api/v1/auth/login` | POST | IMPLEMENTED | NOT_CONNECTED | IMPLEMENTED | G1-T06: generic error (no email enumeration) |
+| `/api/v1/users/me` | GET | IMPLEMENTED | NOT_CONNECTED | IMPLEMENTED | G1-T06: reads userId from JWT principal |
 | `/api/v1/consents` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/consents/current` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/chat/sessions` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
@@ -326,8 +331,9 @@ Ví dụ:
 
 | Migration | Purpose | Task | Status | Applied Locally | Applied Test |
 |---|---|---|---|---|---|
-| V1__enable_extensions.sql | Enable pgcrypto and citext | G1-T02 | COMPLETED | YES | YES |
-| V2__create_users.sql | Create users table | G1-T03 | COMPLETED | YES | YES |
+| V1__enable_extensions.sql | Enable citext + pgcrypto | G1-T04 | IN_PROGRESS | PENDING | N/A (Flyway disabled for H2) |
+| V2__create_users.sql | Create users table | G1-T04 | IN_PROGRESS | PENDING | N/A |
+| V3__create_consent_and_audit.sql | Create consent_events + audit_logs tables | G1-T04 | IN_PROGRESS | PENDING | N/A |
 
 Quy tắc:
 
@@ -341,9 +347,9 @@ Quy tắc:
 
 | Table | Migration | Task | Status | Notes |
 |---|---|---|---|---|
-| users | — | — | NOT_STARTED | |
-| consent_events | — | — | NOT_STARTED | |
-| audit_logs | — | — | NOT_STARTED | |
+| users | V2__create_users.sql | G1-T04 | IN_PROGRESS | |
+| consent_events | V3__create_consent_and_audit.sql | G1-T04 | IN_PROGRESS | |
+| audit_logs | V3__create_consent_and_audit.sql | G1-T04 | IN_PROGRESS | |
 | chat_sessions | — | — | NOT_STARTED | |
 | conversation_messages | — | — | NOT_STARTED | |
 | daily_question_templates | — | — | NOT_STARTED | |
@@ -523,8 +529,8 @@ NOT_CREATED
 | Test Area | Status | Latest Result |
 |---|---|---|
 | Backend Build | PASS | `.\mvnw.cmd clean compile` BUILD SUCCESS (9.96s, 1 source file + 5 resource) after Maven 3.9.16 downloaded via Wrapper 3.3.4 |
-| Backend Unit Tests | NOT_RUN | |
-| Backend Integration Tests | NOT_RUN | |
+| Backend Unit Tests | PASS | `.\mvnw.cmd clean test` (G1-T06): 13/13 AuthIntegrationTest + 1/1 DatabaseContextSmokeTest = 14 tests |
+| Backend Integration Tests | PASS | `.\mvnw.cmd clean test` (G1-T06): 14/14 tests pass (32.28s) |
 | Flyway Migration Test | NOT_RUN | |
 | Frontend Type Check | NOT_RUN | |
 | Frontend Build | NOT_RUN | `npm run build` chưa chạy được vì `frontend/node_modules/` thiếu (chưa `npm install` từ session trước). KHÔNG phải do G1-T01/T02 gây ra | |
@@ -648,12 +654,12 @@ Không ghi giá trị secret thật.
 
 Thứ tự task tiếp theo:
 
-Thứ tự task tiếp theo (sau khi G1-T01 merge vào develop):
+Thứ tự task tiếp theo (sau khi G1-T01...G1-T06 hoàn thành):
 
-1. `G1-T02 — Khởi tạo Spring Boot Java 21`
-2. `G1-T03 — Thiết lập PostgreSQL và cấu hình môi trường`
-3. `G1-T04 — Thiết lập Flyway và extension PostgreSQL`
-4. `G1-T05 — Chuẩn hóa DTO, validation và API response`
+1. `G1-T07 — Phân quyền USER, EXPERT và ADMIN`
+2. `G1-T08 — Quản lý consent dạng lịch sử`
+3. `G1-T09 — Audit cơ bản và request tracing`
+4. `G1-T10 — Health check, Swagger, CORS và kết nối frontend`
 
 Lý do:
 

@@ -19,6 +19,9 @@ import Dashboard from './pages/user/Dashboard';
 import SelfHelpLibrary from './pages/user/SelfHelpLibrary';
 import EmergencySupport from './pages/user/EmergencySupport';
 
+// G1-T10: minimal auth page backed by the real backend API
+import AuthPage from './pages/AuthPage';
+
 // Admin pages
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminOverview from './pages/admin/AdminOverview';
@@ -115,6 +118,9 @@ export default function App() {
       <Routes>
         {/* Landing Page */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* G1-T10: Auth page (sign in / register) — not protected */}
+        <Route path="/auth" element={<AuthPage />} />
 
         {/* User App */}
         <Route path="/app" element={<UserLayout />}>

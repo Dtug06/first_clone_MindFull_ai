@@ -46,7 +46,10 @@ export default function LandingNav() {
           </div>
 
           {/* CTA */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-3">
+            <Link to="/auth" className="text-sm font-medium text-textMuted hover:text-textMain transition-colors">
+              Sign in
+            </Link>
             <Link to="/app" className="btn-primary text-sm">
               Start Free
             </Link>
@@ -84,6 +87,13 @@ export default function LandingNav() {
               {link.label}
             </Link>
           ))}
+          <Link
+            to="/auth"
+            className="block px-4 py-3 text-textMuted hover:text-textMain hover:bg-gray-50 rounded-xl"
+            onClick={() => setIsOpen(false)}
+          >
+            Sign in
+          </Link>
           <Link
             to="/app"
             className="block px-4 py-3 bg-primary text-white text-center rounded-xl font-medium"

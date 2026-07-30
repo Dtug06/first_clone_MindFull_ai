@@ -36,5 +36,19 @@ logging:
     root: WARN
     com.mindbridge: INFO
     org.springframework: WARN
+
+# --- G1-T10: CORS in production ---
+# Origins MUST come from the deploy environment (env var).
+# If unset, allow-list is empty → no cross-origin allowed (fail-safe).
+mindbridge:
+  cors:
+    allowed-origins: ${MIND_BRIDGE_CORS_ORIGINS:}
   file:
     name: /var/log/mindbridge/backend.log
+  # --- G1-T04: Flyway schema migrations ---
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: '0'
+    validate-on-migrate: true

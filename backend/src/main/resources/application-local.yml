@@ -38,6 +38,17 @@ spring:
       # if a real investigation needs it.
       hibernate.format_sql: false
 
+  # --- G1-T04: Flyway schema migrations ---
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: '0'
+    validate-on-migrate: true
+
+# G1-T06: JWT values come from .env (JWT_SECRET, JWT_EXPIRATION)
+# application-local.yml picks them up via ${} placeholder in application.yml.
+
 logging:
   level:
     root: INFO
@@ -46,3 +57,9 @@ logging:
     org.hibernate: WARN
     # Make HikariCP pool startup visible so devs can confirm connection.
     com.zaxxer.hikari: INFO
+
+# --- G1-T10: CORS for local development (Vite default port) ---
+mindbridge:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
