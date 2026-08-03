@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/DB |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T05) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Analysis result schema và repository.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Chạy lại cùng message tạo result mới có liên kết lịch sử.
-- [ ] Message không bị sửa khi model thay đổi.
-- [ ] Query lấy result hiệu lực mới nhất hoạt động đúng.
+- [x] Chạy lại cùng message tạo result mới có liên kết lịch sử. **PASS (2026-08-02)** — `ChatAnalysisResultServiceTest.RecordResult` 7/7 + PG trigger one-active-per-message.
+- [x] Message không bị sửa khi model thay đổi. **PASS (2026-08-02)** — `ChatAnalysisResultIntegrationTest.MessageImmutability`.
+- [x] Query lấy result hiệu lực mới nhất hoạt động đúng. **PASS (2026-08-02)** — `ChatAnalysisResultServiceTest.GetEffectiveResult` + `ChatAnalysisResultIntegrationTest.EffectiveResult`.
 
 ## 5. Liên kết và phụ thuộc
 

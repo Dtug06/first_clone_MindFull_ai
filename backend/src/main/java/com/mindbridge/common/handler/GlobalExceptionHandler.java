@@ -7,6 +7,7 @@ import com.mindbridge.common.exception.ErrorCode;
 import com.mindbridge.common.exception.MindBridgeException;
 import com.mindbridge.common.exception.ResourceNotFoundException;
 import com.mindbridge.common.util.RequestContext;
+import com.mindbridge.safety.event.exception.SafetyEventInputException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -178,6 +180,51 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(body);
     }
 
+    // --- G3-T13: Safety / Expert Review specific ---
+
+    /**
+     * Safety event input errors (event not found, invalid status transition, etc.).
+     * Maps to HTTP 404 (not found) or 400 (bad request) depending on the message.
+     */
+    @ExceptionHandler(SafetyEventInputException.class)
+    public ResponseEntity<ErrorResponse> handleSafetyEventInput(SafetyEventInputException ex,
+                                                               HttpServletRequest request) {
+        ErrorResponse body = new ErrorResponse(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                ex.getMessage(),
+                Instant.now(),
+                RequestContext.getPath().orElse(null),
+                RequestContext.getRequestId().orElse(null)
+        );
+
+        log.warn("Safety event input error on {}: {}", request.getRequestURI(), ex.getMessage());
+
+        // Not-found messages get 404; all others get 400
+        HttpStatus status = ex.getMessage().contains("not found")
+                ? HttpStatus.NOT_FOUND
+                : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(body);
+    }
+
+    /**
+     * Constraint violations (e.g. duplicate expert review submission).
+     * Maps to HTTP 409 Conflict.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(DataIntegrityViolationException ex,
+                                                                  HttpServletRequest request) {
+        ErrorResponse body = new ErrorResponse(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                "Data conflict: the request conflicts with existing data (e.g. duplicate entry)",
+                Instant.now(),
+                RequestContext.getPath().orElse(null),
+                RequestContext.getRequestId().orElse(null)
+        );
+
+        log.warn("Constraint violation on {}: {}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     // --- Catch-all ---
 
     @ExceptionHandler(Exception.class)
@@ -214,6 +261,12 @@ public class GlobalExceptionHandler {
 
             case MATCHING_SAFETY_BLOCKED, MATCHING_INSUFFICIENT_DATA,
                  MATCHING_NO_CANDIDATE -> HttpStatus.CONFLICT;
+
+            case AI_PROVIDER_TIMEOUT, AI_PROVIDER_UNAVAILABLE,
+                 AI_ANALYSIS_OUTPUT_INVALID -> HttpStatus.BAD_GATEWAY;
+
+            case RISK_CLASSIFIER_TIMEOUT, RISK_CLASSIFIER_UNAVAILABLE,
+                 RISK_CLASSIFIER_OUTPUT_INVALID -> HttpStatus.BAD_GATEWAY;
 
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };

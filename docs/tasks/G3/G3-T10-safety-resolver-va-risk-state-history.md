@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/Safety |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T10) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Safety Resolver và lịch sử risk.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Cùng input/rule version cho cùng quyết định xác định được.
-- [ ] Mọi thay đổi risk có bản ghi lịch sử append-only.
-- [ ] Risk hiện tại được truy vấn đúng.
+- [x] Cùng input/rule version cho cùng quyết định xác định được. **PASS (2026-08-02)** — `SafetyResolverService` is pure function; `DeterministicAndAppendOnly` 3/3 + `IntegrationTest` 9/9 with fixed inputs.
+- [x] Mọi thay đổi risk có bản ghi lịch sử append-only. **PASS (2026-08-02)** — `RiskStateHistoryRepository` exposes only `append()`; reflection-scan verifies no `update()`/`setStatus()` mutator.
+- [x] Risk hiện tại được truy vấn đúng. **PASS (2026-08-02)** — `RiskStateHistoryRepository.findLatestByConversationMessageId` + `SafetyResolverService.getCurrentRiskState` covered by `GetCurrentRiskState` 2/2 + `IntegrationTest` 9/9.
 
 ## 5. Liên kết và phụ thuộc
 

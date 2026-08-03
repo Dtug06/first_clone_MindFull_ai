@@ -51,3 +51,98 @@ springdoc:
 mindbridge:
   cors:
     allowed-origins: []
+  # --- G2-T09: Dev seed (dev tooling only) ---
+  # Set --mindbridge.seed.run=true via CLI/env to trigger a deterministic
+  # demo dataset. Default false => never runs during `mvn spring-boot:run`.
+  # Profile `prod` is rejected at runtime even when this flag is set.
+  seed:
+    run: ${MINDBRIDGE_SEED_RUN:false}
+    scenario: ${MINDBRIDGE_SEED_SCENARIO:DEFAULT}
+  # --- G3-T01: AI analysis provider selection ---
+  # Values: "mock" (default, offline, deterministic) or "real" (external LLM, G3-T06).
+  # Override via env: MINDBRIDGE_AI_PROVIDER=real.
+  # Optional: force a specific Mock scenario for ops/tests via
+  # MINDBRIDGE_AI_MOCK_SCENARIO (LEVEL_1_NORMAL|LEVEL_2_FOLLOWUP|LEVEL_3_HIGH_RISK|
+  # LEVEL_4_EMERGENCY|TIMEOUT|MALFORMED_JSON).
+  ai:
+    provider: ${MINDBRIDGE_AI_PROVIDER:mock}
+    mock:
+      force-scenario: ${MINDBRIDGE_AI_MOCK_SCENARIO:}
+    # --- G3-T09: Risk classifier provider selection (Safety pipeline, distinct from chat analysis) ---
+    # Values: "mock" (default, offline, deterministic) or "real" (future, post-MVP).
+    # Override via env: MINDBRIDGE_AI_RISK_CLASSIFIER_PROVIDER=real.
+    # Optional: force a specific Mock scenario for ops/tests via
+    # MINDBRIDGE_AI_RISK_CLASSIFIER_MOCK_SCENARIO (same enum values as chat analysis).
+    risk-classifier:
+      provider: ${MINDBRIDGE_AI_RISK_CLASSIFIER_PROVIDER:mock}
+      mock:
+        force-scenario: ${MINDBRIDGE_AI_RISK_CLASSIFIER_MOCK_SCENARIO:}
+    # --- G3-T04: AI analysis run lifecycle (provider/model label captured per run) ---
+    # provider-label: the value written to ai_analysis_runs.provider.
+    #   Default mirrors `mindbridge.ai.provider` (mock | real).
+    # mock-model: the model label written to ai_analysis_runs.model when the
+    #   mock provider is in use (always "MOCK_V1" for tests; overridden for
+    #   real provider).
+    # prompt-version: the value written to ai_analysis_runs.prompt_version.
+    #   Default is the v1 prompt short hash recorded in
+    #   docs/prompts/chat_analysis_prompt_v1.md (v1:5363675e22fe).
+    analysis-run:
+      provider-label: ${MINDBRIDGE_AI_RUN_PROVIDER_LABEL:mock}
+      mock-model: ${MINDBRIDGE_AI_RUN_MOCK_MODEL:MOCK_V1}
+      prompt-version: ${MINDBRIDGE_AI_RUN_PROMPT_VERSION:v1:5363675e22fe}
+    # --- G3-T06: Real LLM provider (OpenAI per Q1) ---
+    # Activated by setting MINDBRIDGE_AI_PROVIDER=real (and setting the API
+    # key env var). All values below are read from environment variables so
+    # no secret is ever stored in this file.
+    #
+    # The bean factory at startup fails fast with a clear message if any
+    # required value is blank or if the API key env var is unset.
+    real:
+      provider-label: ${MINDBRIDGE_AI_REAL_PROVIDER_LABEL:openai}
+      api-base-url: ${MINDBRIDGE_AI_REAL_API_BASE_URL:https://api.openai.com/v1}
+      # Name of the env var that holds the API key. The value of the
+      # env var is dereferenced at request time (via System.getenv) —
+      # NEVER inline an API key here or anywhere in the repo.
+      api-key-env-var: ${MINDBRIDGE_AI_REAL_API_KEY_ENV_VAR:MINDBRIDGE_AI_REAL_API_KEY}
+      # Concrete model name to call (e.g. gpt-4o-mini). The real
+      # provider also persists whatever the upstream echoes back, so
+      # audit can detect snapshot-alias drift.
+      model: ${MINDBRIDGE_AI_REAL_MODEL:gpt-4o-mini}
+      max-tokens: ${MINDBRIDGE_AI_REAL_MAX_TOKENS:1024}
+      # --- G3-T07: DEPRECATED aliases ---
+      # `mindbridge.ai.real.max-retries` and
+      # `mindbridge.ai.real.request-timeout-ms` are kept here as deprecated
+      # aliases for backwards compatibility with G3-T06 deployments.
+      # New deployments should use the shared namespace under
+      # `mindbridge.ai.provider.retry.*` (read by both the chat analysis
+      # and the risk-classifier pipelines).
+      max-retries: ${MINDBRIDGE_AI_REAL_MAX_RETRIES:1}
+      request-timeout-ms: ${MINDBRIDGE_AI_REAL_REQUEST_TIMEOUT_MS:20000}
+    # --- G3-T07: shared retry / fallback namespace ---
+    # Applied to BOTH ChatAnalysisProvider (chat pipeline) and
+    # RiskClassifierProvider (Safety pipeline). The values below
+    # are the canonical defaults — the deprecated aliases above
+    # are still read by RealLlmChatAnalysisProvider for now.
+    # When the deprecated aliases are removed (planned post-MVP)
+    # this block becomes the single source of truth.
+  pipeline:
+    retry:
+      # Total attempts including the first call. 1 = no retry, 2 = one retry.
+      # Bounded per the G3-T07 rule "không retry vô hạn".
+      # Falls back to `mindbridge.ai.real.max-retries` if unset
+      # (handled in RealLlmChatAnalysisProvider for backwards compat).
+      max-attempts: ${MINDBRIDGE_AI_PROVIDER_RETRY_MAX_ATTEMPTS:1}
+      # Initial backoff in ms. Doubles on each subsequent retry
+      # (200 → 400 → 800 …) until exhausted.
+      initial-backoff-ms: ${MINDBRIDGE_AI_PROVIDER_RETRY_INITIAL_BACKOFF_MS:200}
+      # Per-attempt HTTP timeout in ms. Falls back to
+      # `mindbridge.ai.real.request-timeout-ms` if unset.
+      request-timeout-ms: ${MINDBRIDGE_AI_PROVIDER_RETRY_REQUEST_TIMEOUT_MS:20000}
+    fallback:
+      # When true and all retries are exhausted (or an
+      # Invalid*OutputException occurred on the LAST attempt), the
+      # executor invokes the mock provider once. The resulting row
+      # is persisted with provider = "fallback-mock".
+      # Default false: production stays strict. Local/dev profiles
+      # can flip this via env: MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED=true.
+      enabled: ${MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED:false}

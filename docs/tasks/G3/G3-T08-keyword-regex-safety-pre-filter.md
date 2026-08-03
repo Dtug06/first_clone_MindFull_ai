@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/Safety |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T08) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Safety pre-filter service.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Rule match trả được mã rule và bằng chứng.
-- [ ] Rule version được ghi trong quyết định.
-- [ ] Không hard-code rải rác trong nhiều service.
+- [x] Rule match trả được mã rule và bằng chứng. **PASS (2026-08-02)** — `MatchedRule` DTO carries `code`/`matchType`/`evidence`; `SingleRuleMatch` + `MultipleRules` tests assert full payload.
+- [x] Rule version được ghi trong quyết định. **PASS (2026-08-02)** — `code` is version + intent combination (`KEYWORD_SELF_HARM_V1`); recorded in every `MatchedRule`.
+- [x] Không hard-code rải rác trong nhiều service. **PASS (2026-08-02)** — only `SafetyPreFilterService` matches keywords; `Grep` confirms no `Pattern.matches` elsewhere.
 
 ## 5. Liên kết và phụ thuộc
 

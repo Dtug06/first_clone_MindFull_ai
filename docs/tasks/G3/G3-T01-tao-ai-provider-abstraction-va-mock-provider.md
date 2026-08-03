@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/AI |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T01) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ AI adapter abstraction và mock implementation.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Toàn flow phân tích chạy được khi không có Internet/API key.
-- [ ] Đổi mock/real provider không phải sửa business service.
-- [ ] Có unit test cho mock provider.
+- [x] Toàn flow phân tích chạy được khi không có Internet/API key. **PASS (2026-08-02)** — `MockChatAnalysisProviderIntegrationTest` 1/1 + default `mindbridge.ai.provider=mock` boots full context.
+- [x] Đổi mock/real provider không phải sửa business service. **PASS (2026-08-02)** — `ChatAnalysisProviderConfig` resolves bean via `@ConditionalOnProperty`; T06 real branch added without touching T01.
+- [x] Có unit test cho mock provider. **PASS (2026-08-02)** — `MockChatAnalysisProviderTest` 39 cases across 7 nested classes.
 
 ## 5. Liên kết và phụ thuộc
 

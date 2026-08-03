@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | AI |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T03) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Prompt v1 có version và test cases.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Prompt tạo output đúng schema trên bộ message test.
-- [ ] Không có văn xuôi ngoài JSON khi provider hỗ trợ structured output.
-- [ ] Prompt không chứa threshold nhạy cảm tự bịa.
+- [x] Prompt tạo output đúng schema trên bộ message test. **PASS (2026-08-02)** — 18/18 `TestCasesFromG3T03` PASS.
+- [x] Không có văn xuôi ngoài JSON khi provider hỗ trợ structured output. **PASS (2026-08-02)** — prompt line 68 explicit "Return ONLY the JSON object. No prose, no markdown fences".
+- [x] Prompt không chứa threshold nhạy cảm tự bịa. **PASS (2026-08-02)** — explicit guard line 73 "Do NOT apply clinical thresholds, decision rules, or escalation policies".
 
 ## 5. Liên kết và phụ thuộc
 

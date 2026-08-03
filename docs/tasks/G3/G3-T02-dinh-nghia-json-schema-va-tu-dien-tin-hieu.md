@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | AI/Data |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T02) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ JSON Schema v1 và Java DTO tương ứng.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Schema validate được output mẫu đúng/sai.
-- [ ] Frontend/backend dùng cùng tên field.
-- [ ] Mọi field có định nghĩa và đơn vị rõ ràng.
+- [x] Schema validate được output mẫu đúng/sai. **PASS (2026-08-02)** — `ChatAnalysisOutputSchemaTest` 8/8 (2 valid + 4 invalid + 2 contract).
+- [x] Frontend/backend dùng cùng tên field. **PASS (2026-08-02)** — `frontend/src/types/chat.ts` uses same field names.
+- [x] Mọi field có định nghĩa và đơn vị rõ ràng. **PASS (2026-08-02)** — 10 fields + 3 sub-fields documented in `docs/schemas/chat_analysis_v1.dictionary.md`.
 
 ## 5. Liên kết và phụ thuộc
 

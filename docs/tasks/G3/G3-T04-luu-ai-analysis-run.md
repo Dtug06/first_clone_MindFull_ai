@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/DB |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T04) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Migration và service ghi AI run.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Mỗi lần gọi provider tạo một run.
-- [ ] Run thất bại lưu lỗi kỹ thuật nhưng không lộ raw chat.
-- [ ] Có thể truy vết result dùng model/prompt/schema nào.
+- [x] Mỗi lần gọi provider tạo một run. **PASS (2026-08-02)** — `AiAnalysisRunIntegrationTest.twoRunsNoDedup` 1/1 + `AiAnalysisRunServiceTest` 9/9.
+- [x] Run thất bại lưu lỗi kỹ thuật nhưng không lộ raw chat. **PASS (2026-08-02)** — `AiRunErrorRedactor` 13/13 (truncate 200 + non-ASCII→placeholder).
+- [x] Có thể truy vết result dùng model/prompt/schema nào. **PASS (2026-08-02)** — V15 `ai_analysis_runs` 19 cols includes `provider`/`model`/`prompt_version`/`schema_version`/`input_hash`/`output_hash`.
 
 ## 5. Liên kết và phụ thuộc
 

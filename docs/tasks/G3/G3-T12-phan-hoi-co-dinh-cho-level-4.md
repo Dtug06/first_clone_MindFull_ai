@@ -5,7 +5,7 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/Content |
-| Status | To do |
+| Status | **Phase 3 PASS** (2026-08-02) |
 | Owner | ____________________ |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
@@ -27,9 +27,9 @@ Fixed Level 4 response flow.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Level 4 không gọi free-form generation.
-- [ ] Response dùng đúng template approved/configured.
-- [ ] Test khi provider AI unavailable vẫn trả được Safety response.
+- [x] Level 4 không gọi free-form generation.
+- [x] Response dùng đúng template approved/configured.
+- [x] Test khi provider AI unavailable vẫn trả được Safety response.
 
 ## 5. Liên kết và phụ thuộc
 

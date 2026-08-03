@@ -5,7 +5,7 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/Safety |
-| Status | To do |
+| Status | **Phase 3 PASS** (2026-08-02) |
 | Owner | ____________________ |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
@@ -27,9 +27,9 @@ Safety event/action workflow.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Level 3-4 luôn tạo event có source.
-- [ ] Một event có thể có nhiều action.
-- [ ] Matching service đọc được trạng thái bị chặn.
+- [x] Level 3-4 luôn tạo event có source. — Pass: `SafetyEventService.recordLevel3Or4Event` reject khi sources empty; integration test `l3Persists` / `l4Persists` / `auditLogged` confirm 1 source per event.
+- [x] Một event có thể có nhiều action. — Pass: `SafetyAction` 1-n `safety_event_id` (FK CASCADE), `multipleSources` unit test + integration test asserts 2 actions under 1 event, `markSucceeded`/`markFailed`/`markSkipped` controlled transitions only.
+- [x] Matching service đọc được trạng thái bị chặn. — Pass: `isUserBlocked(UUID)` + `getActiveBlockingEvent(UUID)` (partial index `safety_events_user_active_blocking`); integration test `isUserBlocked_trueWhenOpen_falseWhenAllResolved`.
 
 ## 5. Liên kết và phụ thuộc
 

@@ -36,6 +36,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 // Expert pages
 import ExpertLayout from './pages/expert/ExpertLayout';
 import ExpertCases from './pages/expert/ExpertCases';
+import ExpertCaseDetail from './pages/expert/ExpertCaseDetail';
 
 // Loading component
 function LoadingSpinner() {
@@ -148,6 +149,7 @@ export default function App() {
         <Route path="/expert" element={<ExpertLayout />}>
           <Route index element={<ExpertCases />} />
           <Route path="cases" element={<ExpertCases />} />
+          <Route path="cases/:eventId" element={<ExpertCaseDetail />} />
         </Route>
       </Routes>
     </Suspense>

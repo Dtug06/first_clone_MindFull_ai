@@ -50,6 +50,18 @@ public enum ErrorCode {
     // --- Behavior ---
     BEHAVIOR_PROFILE_NOT_FOUND("BEHAVIOR_PROFILE_NOT_FOUND", "Behavior profile not found"),
 
+    // --- AI Analysis ---
+    AI_PROVIDER_TIMEOUT("AI_PROVIDER_TIMEOUT", "AI provider did not respond within the timeout"),
+    AI_PROVIDER_UNAVAILABLE("AI_PROVIDER_UNAVAILABLE", "AI provider is currently unavailable"),
+    AI_ANALYSIS_OUTPUT_INVALID("AI_ANALYSIS_OUTPUT_INVALID", "AI provider returned an output that failed schema validation"),
+
+    // --- Safety / Risk Classifier (G3-T09) ---
+    // Separate codes from AI Analysis so audit trails can distinguish
+    // chat analysis failures from risk classifier failures.
+    RISK_CLASSIFIER_TIMEOUT("RISK_CLASSIFIER_TIMEOUT", "Risk classifier did not respond within the timeout"),
+    RISK_CLASSIFIER_UNAVAILABLE("RISK_CLASSIFIER_UNAVAILABLE", "Risk classifier is currently unavailable"),
+    RISK_CLASSIFIER_OUTPUT_INVALID("RISK_CLASSIFIER_OUTPUT_INVALID", "Risk classifier returned an output that failed schema validation"),
+
     // --- Consent ---
     CONSENT_REQUIRED("CONSENT_REQUIRED", "Required consent has not been granted");
 

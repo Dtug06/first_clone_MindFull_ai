@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/Safety |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T09) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ Risk classifier adapter và result.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Risk classifier chạy độc lập với chat response.
-- [ ] Output được validate trước khi sử dụng.
-- [ ] Có test cho 4 mức risk bằng dữ liệu giả.
+- [x] Risk classifier chạy độc lập với chat response. **PASS (2026-08-02)** — `risk_classifier` package chỉ import `EvidenceSpan` value class; `RiskClassifierProvider.classify()` takes 4-trường `RiskClassifierInput` (no assistant response field).
+- [x] Output được validate trước khi sử dụng. **PASS (2026-08-02)** — 3-layer validation: compact ctor + factory + exception.
+- [x] Có test cho 4 mức risk bằng dữ liệu giả. **PASS (2026-08-02)** — 4 keyword tests + 16 case DEMO_ONLY in `docs/safety/risk_classifier_test_cases.md`.
 
 ## 5. Liên kết và phụ thuộc
 

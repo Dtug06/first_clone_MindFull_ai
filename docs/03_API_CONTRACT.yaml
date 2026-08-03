@@ -21,6 +21,7 @@ tags:
   - name: Behavior
   - name: Matching
   - name: CBT
+  - name: ExpertReview
 
 security:
   - bearerAuth: []
@@ -198,6 +199,7 @@ paths:
       summary: Send user message
       parameters:
         - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -257,6 +259,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -272,6 +275,21 @@ paths:
                 $ref: "#/components/schemas/DailyAnswerResponse"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /daily-checkins/history:
+    get:
+      tags:
+        - DailyCheckin
+      summary: Get recent Daily Check-in history (last 7 days, grouped by date)
+      responses:
+        "200":
+          description: Check-in history, newest date first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckinHistoryResponse"
 
   /behavior/daily-features:
     get:
@@ -395,6 +413,120 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserProgramProgressResponse"
 
+  # --- G3-T13: Expert Review ---
+  /expert-reviews/events:
+    get:
+      tags:
+        - ExpertReview
+      summary: List safety events for expert review
+      description: >
+        Returns a paginated list of all safety events. Only accessible
+        to EXPERT and ADMIN roles. USER role receives 403.
+      parameters:
+        - name: status
+          in: query
+          description: Filter by event status
+          required: false
+          schema:
+            $ref: "#/components/schemas/SafetyEventStatus"
+        - name: riskLevel
+          in: query
+          description: Filter by risk level (3 or 4)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 4
+        - $ref: "#/components/parameters/PageNumber"
+        - $ref: "#/components/parameters/PageSize"
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            default: createdAt,desc
+      responses:
+        "200":
+          description: Paginated list of event summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedSafetyEventSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /expert-reviews/events/{eventId}:
+    get:
+      tags:
+        - ExpertReview
+      summary: Get safety event detail
+      description: >
+        Returns full event detail including sources, actions, and existing reviews.
+        Records an EXPERT_REVIEW_OPENED audit event. Only EXPERT and ADMIN roles.
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyEventDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /expert-reviews/events/{eventId}/review:
+    post:
+      tags:
+        - ExpertReview
+      summary: Submit an expert review decision
+      description: >
+        Submits a review decision for the given safety event. Creates an
+        expert_reviews row and transitions the event to UNDER_REVIEW.
+        Emits EXPERT_REVIEW_DECIDED audit event. The unique constraint on
+        (safety_event_id, reviewer_id) causes HTTP 409 on duplicate submission.
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitReviewRequest"
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpertReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
 components:
 
   securitySchemes:
@@ -422,6 +554,23 @@ components:
         maximum: 100
         default: 20
 
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
     SessionId:
       name: sessionId
       in: path
@@ -437,6 +586,20 @@ components:
       schema:
         type: string
         format: uuid
+
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Optional client-generated UUID for retry-safe double-click protection.
+        Same key + same payload = same response (replay). Used by:
+        POST /chat/sessions/{sessionId}/messages and POST /daily-checkins/{assignmentId}/answer.
+        TTL: 24h. Missing key = behavior as before (no idempotency).
+      schema:
+        type: string
+        maxLength: 64
+        pattern: '^[A-Za-z0-9\-]+$'
 
   responses:
 
@@ -806,6 +969,23 @@ components:
           type: string
           format: date-time
 
+    CheckinHistoryResponse:
+      type: object
+      required:
+        - date
+        - timezone
+        - answers
+      properties:
+        date:
+          type: string
+          format: date
+        timezone:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyAnswerResponse"
+
     UserDailyFeatureResponse:
       type: object
       required:
@@ -1074,6 +1254,28 @@ components:
         - EXPERT
         - ADMIN
 
+    # --- G3-T13: Expert Review ---
+    PagedSafetyEventSummary:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/SafetyEventSummary"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
+
     UserStatus:
       type: string
       enum:
@@ -1149,4 +1351,182 @@ components:
         - FINAL_ASSESSMENT
         - COMPLETED
         - MAINTENANCE
+
+    # --- G3-T13: Expert Review ---
+    ExpertReviewDecision:
+      type: string
+      description: >
+        Decision made by an expert reviewer. CONFIRM_RISK and DOWNGRADE_RISK
+        are advisory -- they do NOT change the event's risk_level. The system's
+        risk state is only modified through the Safety Resolver pipeline.
+      enum:
+        - CONFIRM_RISK
+        - DOWNGRADE_RISK
+        - ESCALATE
+        - NO_ACTION
+        - CONTINUE_MONITORING
+        - REQUEST_FOLLOWUP
+        - DISMISS
+
+    SafetyEventStatus:
+      type: string
+      enum:
+        - OPEN
+        - UNDER_REVIEW
+        - RESOLVED
+        - DISMISSED
+
+    SubmitReviewRequest:
+      type: object
+      required:
+        - decision
+      properties:
+        decision:
+          $ref: "#/components/schemas/ExpertReviewDecision"
+        note:
+          type: string
+          maxLength: 5000
+          description: Optional free-text note. Required when decision is DISMISS.
+
+    ExpertReviewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        safetyEventId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+        reviewerDisplayName:
+          type: string
+        decision:
+          $ref: "#/components/schemas/ExpertReviewDecision"
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SafetyEventSource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceType:
+          type: string
+          enum:
+            - CHAT_ANALYSIS
+            - DAILY_ANSWER
+            - EXERCISE_SUBMISSION
+            - PROGRAM_ASSESSMENT
+        sourceId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SafetyAction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        actionType:
+          type: string
+          enum:
+            - SHOW_TEMPLATE
+            - BLOCK_MATCHING
+            - FLAG_REVIEW
+            - PAUSE_PROGRAM
+        status:
+          type: string
+          enum:
+            - PENDING
+            - SUCCEEDED
+            - FAILED
+            - SKIPPED
+        errorMessage:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SafetyEventDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        riskLevel:
+          type: integer
+          minimum: 1
+          maximum: 4
+        status:
+          $ref: "#/components/schemas/SafetyEventStatus"
+        summary:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/SafetyEventSource"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SafetyAction"
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpertReviewResponse"
+
+    SafetyEventSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        riskLevel:
+          type: integer
+          minimum: 1
+          maximum: 4
+        status:
+          $ref: "#/components/schemas/SafetyEventStatus"
+        summary:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewCount:
+          type: integer
+          minimum: 0
         - WITHDRAWN

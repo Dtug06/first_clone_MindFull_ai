@@ -1,0 +1,16 @@
+{
+  "id": "chatcmpl-fixture-malformed",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "this is not a JSON object, just prose"
+      },
+      "finish_reason": "stop"
+    }
+  ]
+}

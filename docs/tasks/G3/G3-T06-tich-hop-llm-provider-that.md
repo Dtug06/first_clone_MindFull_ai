@@ -5,8 +5,8 @@
 | Group | G3 — Tích hợp LLM và Safety |
 | Priority | MUST |
 | Tags | Backend/AI |
-| Status | To do |
-| Owner | ____________________ |
+| Status | Phase 3 PASS (2026-08-02) |
+| Owner | Cursor (G3-T06) |
 | Source | `docs/MindBridge_AI_Danh_muc_Task_G1_G8_Cho_2_Dev.docx` (v1.0, 29/07/2026) |
 
 ## 1. Mục tiêu
@@ -27,9 +27,9 @@ RealLlmChatAnalysisProvider.
 
 ## 4. Hoàn thành khi (Definition of Done)
 
-- [ ] Một message test được phân tích và lưu thành công.
-- [ ] Không có API key trong code/repository.
-- [ ] Provider lỗi được map thành trạng thái FAILED rõ ràng.
+- [x] Một message test được phân tích và lưu thành công. **PASS (2026-08-02)** — `AiAnalysisRunServiceRealProviderIntegrationTest` 1/1 + `RealLlmChatAnalysisProviderTest` 12/12.
+- [x] Không có API key trong code/repository. **PASS (2026-08-02)** — `MINDBRIDGE_AI_REAL_API_KEY` env-var NAME only; `test-fixture-key-not-real-do-not-use-in-prod` is a benign surefire fixture; `secret-leak` grep returns 0 hits.
+- [x] Provider lỗi được map thành trạng thái FAILED rõ ràng. **PASS (2026-08-02)** — 401/403/429/5xx → `ProviderUnavailableException`; 408/504/524 + `HttpTimeoutException` → `ProviderTimeoutException`; 4xx+malformed → `InvalidAnalysisOutputException`; all map to FAILED via `AiAnalysisRunService.markFailed`.
 
 ## 5. Liên kết và phụ thuộc
 

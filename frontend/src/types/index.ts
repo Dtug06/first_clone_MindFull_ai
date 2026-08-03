@@ -95,3 +95,65 @@ export interface OrganizationStats {
   checkInTrend: number[];
   commonTopics: { topic: string; count: number }[];
 }
+
+// --- G3-T13: Expert Review ---
+export type SafetyEventStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
+
+export type ExpertReviewDecision =
+  | 'CONFIRM_RISK'
+  | 'DOWNGRADE_RISK'
+  | 'ESCALATE'
+  | 'NO_ACTION'
+  | 'CONTINUE_MONITORING'
+  | 'REQUEST_FOLLOWUP'
+  | 'DISMISS';
+
+export interface SafetyEventSource {
+  id: string;
+  sourceType: 'CHAT_ANALYSIS' | 'DAILY_ANSWER' | 'EXERCISE_SUBMISSION' | 'PROGRAM_ASSESSMENT';
+  sourceId: string | null;
+  createdAt: string;
+}
+
+export interface SafetyAction {
+  id: string;
+  actionType: 'SHOW_TEMPLATE' | 'BLOCK_MATCHING' | 'FLAG_REVIEW' | 'PAUSE_PROGRAM';
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+  errorMessage: string | null;
+  executedAt: string | null;
+  createdAt: string;
+}
+
+export interface ExpertReviewResponse {
+  id: string;
+  safetyEventId: string;
+  reviewerId: string;
+  reviewerDisplayName: string;
+  decision: ExpertReviewDecision;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface SafetyEventDetail {
+  id: string;
+  userId: string;
+  riskLevel: number;
+  status: SafetyEventStatus;
+  summary: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  sources: SafetyEventSource[];
+  actions: SafetyAction[];
+  reviews: ExpertReviewResponse[];
+}
+
+export interface SafetyEventSummary {
+  id: string;
+  userId: string;
+  riskLevel: number;
+  status: SafetyEventStatus;
+  summary: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  reviewCount: number;
+}

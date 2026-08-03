@@ -147,7 +147,7 @@ Current Blockers:
 | G1 | Backend Foundation, Auth and Consent | IN_REVIEW | UNASSIGNED | G1-T01 review local; G1-T02 Spring Boot scaffold local (commit `72866c9`); cả 2 chờ push origin (T01 và T02 cùng chờ GitHub credentials) |
 | G2 | Chat, Daily Check-in and Data Collection | NOT_STARTED | UNASSIGNED | |
 | G3 | LLM Integration and Safety | NOT_STARTED | UNASSIGNED | |
-| G4 | Behavior Analysis and User Profile | NOT_STARTED | UNASSIGNED | |
+| G4 | Behavior Analysis and User Profile | IN_REVIEW | UNASSIGNED | **G4-T01 Phase 3 review 2026-08-04 — verdict APPROVE WITH FINDINGS** (same HIGH pre-existing regression L-env-1 carry-forward from G3-T13; cannot promote to PASS until G2-baseline SafetyEventSource @Entity hotfix lands — out-of-scope for G4). Deliverable docs/analysis/FEATURE_DICTIONARY_v1.md (50501 bytes, 1213 lines, 12 sections + 8 per-feature specs + 3 appendices) PASSES contract §17 25 acceptance items + task spec DoD 3 items. 3 contract conflicts B.1/B.2/B.3 chốt (b)/(b)/(b) (stress raw 1-5 khộp G2 seed; ANXIETY_SIGNAL_FORMULA = CONFIG_PLACEHOLDER; sleep_quality chưa seed) — không tựo field ngoài task. See ### G4-T01 — Chốt Feature Dictionary MVP (Phase 3 review COMPLETE 2026-08-04 — verdict APPROVE WITH FINDINGS) below Frozen Baseline History. |
 | G5 | CBT Catalog and Runtime | NOT_STARTED | UNASSIGNED | |
 | G6 | Program Matching and Recommendation | NOT_STARTED | UNASSIGNED | |
 | G7 | Frontend Integration, Dashboard and Admin | PARTIAL | UNASSIGNED | Frontend cơ bản đã tồn tại |
@@ -195,6 +195,146 @@ Ví dụ:
 | G1-T04 | Implement JWT authentication | Dev A | 2026-08-03 | feature/G1-T04-jwt | Login works, ownership test pending |
 
 ---
+
+
+---
+
+## Frozen Baseline History
+
+### G3 group Phase 3 review ledger (2026-08-02 — 2026-08-04)
+
+> **Reading guide**: Each row maps a G3 sub-task to its Phase 3 verdict and a short evidence pointer. Full evidence for each row lives in the corresponding G3 task file (`docs/tasks/G3/G3-Txx-*.md`). Verdict rules per `.cursor/rules/00-project-core.mdc`: APPROVE / APPROVE WITH FINDINGS / BLOCK.
+
+| # | Task | Phase 3 status | Verdict | Short evidence |
+|---|---|---|---|---|
+| 1 | G3-T01 — AI Provider Abstraction + Mock | Phase 3 PASS | **APPROVE** | 44/44 (MockChatAnalysisProviderTest 39 + ChatAnalysisProviderConfigTest 4 + MockChatAnalysisProviderIntegrationTest 1). |
+| 2 | G3-T02 — JSON Schema + signal dict | Phase 3 PASS | **APPROVE** | 8/8 ChatAnalysisOutputSchemaTest (2 valid + 4 invalid + 2 contract). |
+| 3 | G3-T03 — Prompt design + 18 test cases | Phase 3 PASS | **APPROVE** | 18/18 TestCasesFromG3T03 (1-to-1 mapping with `docs/prompts/chat_analysis_test_cases.md`). |
+| 4 | G3-T04 — Lưu AI Analysis Run | Phase 3 PASS | **APPROVE WITH MINOR FINDINGS** | 36/36 AiAnalysisRun-related tests PASS; full regression 396/396 PASS at T04 review time. |
+| 5 | G3-T05 — Lưu Chat Analysis Result versioned | Phase 3 PASS | **APPROVE** | 38/38 (ChatAnalysisResultTest 22 + ChatAnalysisResultServiceTest 9 + ChatAnalysisResultIntegrationTest 7). |
+| 6 | G3-T06 — Tích hợp LLM provider thật | Phase 3 PASS | **APPROVE WITH MINOR FINDINGS** | RealLlmChatAnalysisProvider with mock HttpClient; status-code policy broadened in T07. |
+| 7 | G3-T07 — Validate output, retry và fallback | Phase 3 PASS | **APPROVE WITH MINOR FINDINGS** | 54/54 targeted PASS; full regression 494/495 (1 pre-existing G1 flake unrelated). |
+| 8 | G3-T08 — Keyword/Regex Safety Pre-filter | Phase 3 PASS | **APPROVE** | 36/36 (SafetyPreFilterServiceTest 13 + 5 + TextNormalizerTest 9 + SafetyKeywordRuleTest 9). |
+| 9 | G3-T09 — LLM Risk Classification riêng | Phase 3 PASS | **APPROVE** | 26/26 (MockRiskClassifierProviderTest 18 + RiskClassifierProviderConfigTest 3 + MockRiskClassifierProviderIntegrationTest 5). |
+| 10 | G3-T10 — Safety Resolver + Risk State History | Phase 3 PASS | **APPROVE** | 28/28 (SafetyResolverServiceTest 19 + SafetyResolverIntegrationTest 9). |
+| 11 | G3-T11 — Safety Event, Source và Action | Phase 3 PASS | **APPROVE** | 31/31 (SafetyEventServiceIntegrationTest 5 + 8 unit + 3 entity unit). Migration V17 3 tables. |
+| 12 | G3-T12 — Phản hồi cố định cho Level 4 | Phase 3 PASS | **APPROVE** | 43/43 + 8/8 existing = 51/51. LLM-independence verified by functional + bytecode-scan tests. |
+| 13 | G3-T13 — Expert Review và giao diện Safety cơ bản | Phase 3 PARTIAL | **APPROVE WITH FINDINGS** | 21/21 unit tests PASS; full integration suite blocked by pre-existing L-env-1 regression (SafetyEventSource JPA mismatch). Migration V20. |
+
+**Full regression** at T07 closure: `mvnw -B test` → **494/495 PASS** (1 pre-existing G1 flake `ConsentGuardTest.grantedThenRevoked_latestWins` acknowledged in G2 acceptance, unrelated to G3).
+
+### G3-T01 → G3-T13 — short per-task summary
+
+- **G3-T01 (AI Provider Abstraction + Mock)**: `com.mindbridge.analysis.provider` package — `ChatAnalysisProvider` interface + `ChatAnalysisInput`/`ChatAnalysisOutput` DTO + `MockChatAnalysisProvider` (6 force-scenarios, gated by `mindbridge.ai.provider=mock`) + 3 exceptions + 3 ErrorCodes + `ChatAnalysisProviderConfig`. No DB migration.
+- **G3-T02 (JSON Schema + signal dict)**: 5 enum files (Topic 7 / Emotion 7 / Intent 4 / Signal 9) + `AnalysisSchemaVersion` const V1 + JSON Schema `docs/schemas/chat_analysis_v1.schema.json` (Draft 07, 10 fields required, `additionalProperties: false`) + dictionary doc + 1 dep `com.networknt:json-schema-validator:1.5.3` (test scope).
+- **G3-T03 (Prompt design + 18 test cases)**: `docs/prompts/chat_analysis_prompt_v1.md` (SHA-256 `5363675e22fe77100908eaee6ab003207da57ba557e7c09d5d52671c1a9447e2`, alias `v1:5363675e22fe`) + test cases doc; `@Nested TestCasesFromG3T03` 18 tests.
+- **G3-T04 (Lưu AI Analysis Run)**: `ai_analysis_runs` table (V15) — columns `provider`/`model`/`prompt_version`/`schema_version`/`error_code`/`error_summary`. 36 tests including AiRunErrorRedactor.
+- **G3-T05 (Lưu Chat Analysis Result versioned)**: `chat_analysis_results` table (V16) — polymorphic support + schema_version per row. 38 tests.
+- **G3-T06 (Tích hợp LLM provider thật)**: `RealLlmChatAnalysisProvider` with java.net.http.HttpClient + env var API key (fail-secure). 14 unit tests + 5 integration with mock HttpClient.
+- **G3-T07 (Validate output, retry, fallback)**: JSON Schema validator + ProviderRetryExecutor + FallbackDecision truth table (incl. Level-4 safety guard). Mock HttpClient integration tests for success-after-retry / retries-exhausted / fallback-on / non-retryable / timeout.
+- **G3-T08 (Keyword/Regex Safety Pre-filter)**: `safety_keyword_rules` table (V13) + `SafetyPreFilterService` + `TextNormalizer` (NFC + unicode normalization). 36 tests. Returns preliminary_risk only; NO finalRiskLevel.
+- **G3-T09 (LLM Risk Classification riêng)**: `RiskClassifierProvider` interface + Mock + 3 exceptions. `RiskClassifierOutput` 4 fields, NO finalRiskLevel (resolver owns final per docs/04 §5). 26 tests.
+- **G3-T10 (Safety Resolver + Risk State History)**: `risk_state_history` table (V14, append-only, NO setter/NO @PreUpdate/NO @PreRemove). Resolver rule = `max(ruleRisk, modelRisk)` with downgrade guard. Structured `reason_codes` JSONB. 31 tests.
+- **G3-T11 (Safety Event, Source, Action)**: `safety_events`/`safety_event_sources`/`safety_actions` (V17). Polymorphic `(source_type, source_id)` without DB-level FK on polymorphic column (Phase 1 decision C5). 31 tests. Audit logging via AuditService.
+- **G3-T12 (Phản hồi cố định cho Level 4)**: `safety_response_templates` (V18) + template audit (V19) + `SafetyResponseTemplateExecutor` (LLM-independent by construction; bytecode-scan test enforces). 51/51 tests.
+- **G3-T13 (Expert Review + giao diện Safety cơ bản)**: `expert_reviews` (V20) + `ExpertReviewService` + expert review UI. 21/21 unit tests PASS; full integration suite blocked by pre-existing L-env-1 regression (SafetyEventSource POJO vs JPA repository mismatch in G2 baseline).
+
+### G3 closed 2026-08-03 — 13/13 tasks Phase 3 APPROVE or APPROVE WITH FINDINGS
+
+**Known carry-forward finding (HIGH, pre-existing)** — L-env-1: `@SpringBootTest` context loading fails with `Not a managed type: SafetyEventSource`. Root cause: `SafetyEventSource` is a POJO but `SafetyEventSourceRepository` declares it as JPA entity. Affects every `@SpringBootTest` (216 of 587 tests in `mvn test`). **Resolution**: 1-line hotfix — add `@Entity` annotation to `SafetyEventSource.java:1`. **Out-of-scope for G3/G4-T01**; team should hotfix in a separate 30-minute commit before T11 callers wire up real integration tests.
+
+### G4-T01 — Chốt Feature Dictionary MVP (Phase 3 review COMPLETE 2026-08-04 — verdict APPROVE WITH FINDINGS)
+
+**Task**: chốt Feature Dictionary v1 với 8 feature (stress, mood, energy, sleep, anxiety_signal, engagement, exercise_completion, max_risk) theo `Pre_G4_Implementation_Decisions_and_Feature_Contract.md` (pre_g4_contract_v1, approved 2026-08-03).
+
+**Deliverable**: `docs/analysis/FEATURE_DICTIONARY_v1.md` (50501 bytes, 1213 lines, 12 sections + 8 per-feature specs + 3 appendices).
+
+**Phase 1 plan** (re-verified 2026-08-04): Cursor inspected actual G2/G3 schema files (V6 `daily_question_templates`+`daily_question_options`, V7 `users.timezone`, V8 `daily_question_assignments`, V9 `daily_question_answers`, V10 backfill `scale_min`/`scale_max`, V11 `behavioral_events` 12 event types, V13 `safety_keyword_rules`, V14 `risk_state_history`, V16 `chat_analysis_results`) before mapping source per contract §15.
+
+**3 contract conflicts surfaced and chốt** (per contract §15):
+- **B.1** stress raw scale: contract §8.1 ghi `Integer 1-10`; G2 seed thực tế là `NUMERIC 1-5` (STRESS v1 SCALE 1-5 trong V6 seed). **Decision (b)**: ghi `1-5` khớp G2 seed (đã locked); không tự tạo `STRESS v2 1-10` field ngoài task.
+- **B.2** `anxiety_signal`: G3 schema không có field riêng (chỉ có `chat_analysis_results.signals JSONB` enum + `emotion` enum + `model_risk_level`). **Decision (b)**: derive từ signals+emotion+model_risk với formula = `CONFIG_PLACEHOLDER` (`ANXIETY_SIGNAL_FORMULA`) cho đến khi chuyên gia duyệt; không defer feature.
+- **B.3** `sleep_quality`: template `SLEEP_QUALITY` SCALE 1-5 **chưa được seed** trong MVP G2 (chỉ `SLEEP` duration template seeded). **Decision (b)**: `sleep_score` = `null / UNKNOWN` cho đến khi template `SLEEP_QUALITY` được seed trong task tương lai; không tự seed.
+
+**Phase 3 evidence**:
+
+| Acceptance criterion (contract §17) | Status | Evidence in deliverable |
+|---|---|---|
+| §17.1 Đủ 8 feature | PASS | §5 Feature Catalog (8 rows); §6.1 stress + §6.2 mood + §6.3 energy + §6.4 sleep + §6.5 anxiety_signal + §6.6 engagement + §6.7 exercise_completion + §6.8 max_risk |
+| §17.2 Primary source per feature | PASS | §6.x.1 mỗi feature |
+| §17.3 Supporting/fallback source | PASS | §6.1.1 stress supporting + §6.2.1 mood supporting + §6.4.4 sleep supporting; §6.3.1 energy inferred=UNAVAILABLE + §6.5.1 anxiety supporting; others N/A |
+| §17.4 Unit + range | PASS | §6.x.2 (20 occurrences of `Range`) |
+| §17.5 Polarity | PASS | §6.x.3 (13 occurrences of `Polarity`) |
+| §17.6 Missing semantics | PASS | §4 Null/Unknown/Zero/NOT_APPLICABLE + §6.x.4/5 |
+| §17.7 Raw vs normalized | PASS | §2.2 calculation versions + §6.x.2/3 (30 occurrences) |
+| §17.8 Explicit / Inferred / Behavioral | PASS | §3 definitions + §3.4 classification table (67 occurrences) |
+| §17.9 NEVER convert null to 0 | PASS | §4 (mandatory rule) + mỗi feature §6 (2 explicit statements) |
+| §17.10 Stress raw scale | PASS (with documented divergence) | §6.1 + §10 B.1 — ghi `1-5` khớp G2 seed |
+| §17.11 Mood 1-5 | PASS | §6.2.2 |
+| §17.12 Energy 1-5 | PASS | §6.3.2 |
+| §17.13 Sleep duration/quality tách riêng | PASS | §6.4.2 + §10 B.3 |
+| §17.14 Anxiety 0-1 | PASS | §6.5.2 |
+| §17.15 Engagement 0-1 | PASS | §6.6.2 |
+| §17.16 Exercise completion 0-1 | PASS | §6.7.2 |
+| §17.17 Max risk 1-4 | PASS | §6.8.2 |
+| §17.18 Timezone policy | PASS | §8 (Timezone & Local-Date Policy — mirror contract §6) |
+| §17.19 Late-data policy | PASS | §9 (Late-Arriving Data Policy — mirror contract §6.7) |
+| §17.20 Open Expert Decisions table | PASS | §10.1 (12 rows mirror contract §13.1) |
+| §17.21 `feature_dictionary_v1` version constant | PASS | §2.2 (`FEATURE_DICTIONARY_VERSION = "v1"`) |
+| §17.22 Initial calculation versions | PASS | §2.2 (5 versions: normalization_v1, sleep_quality_v1, engagement_v1_chat_checkin, exercise_completion_v1, max_risk_daily_v1; 33 occurrences) |
+| §17.23 Không clinical threshold tự bịa | PASS | §10 + §12.3 checklist (26 occurrences of `TODO_EXPERT_REVIEW`/`CONFIG_PLACEHOLDER`/`DEMO_ONLY`) |
+| §17.24 G4-T10 known gap ghi nhận | PASS | `docs/05_IMPLEMENTATION_STATUS.md` Known Blockers section + §10 §3 in deliverable |
+| §17.25 G6 deferred | PASS | `docs/05_IMPLEMENTATION_STATUS.md` G6 row (NOT_STARTED) + §10.4 in deliverable |
+
+**Task spec DoD §4**:
+- [x] Mỗi feature có công thức và nguồn rõ ràng → §6.x.1 Primary source + §6.x.2 Raw type + §6.x.3 Normalized formula cho mỗi feature (stress `(raw-1)/4` cho 1-5; mood `(raw-1)/4`; energy `(raw-1)/4`; sleep `(quality-1)/4` pending template; anxiety = `CONFIG_PLACEHOLDER`; engagement = `CONFIG_PLACEHOLDER` weights; exercise = `null/NOT_APPLICABLE`; max_risk = `MAX(final_risk_level within local_date)`).
+- [x] Hai dev hiểu giống nhau về null/unknown/zero → §4 bảng 4-cột (`null`/`UNKNOWN`/`zero`/`NOT_APPLICABLE`) + §10 mandatory rule "NEVER convert null to 0" nhắc lại trong mỗi feature §6.
+- [x] Feature có test case mẫu → §11 tổng hợp (1 happy path + 1 missing variant per feature) + §6.x.6/7 test case chi tiết.
+
+**Security review**:
+- ✅ No raw chat content in features (§3.3 explicit: "Behavioral data **không** được chứa raw chat content. `properties` JSONB chỉ chứa metadata (duration_ms, message_length bucketed, ...) — KHÔNG text snippet, KHÔNG hash of content ngoại trừ SHA-256 của `evidenceSpans`").
+- ✅ No hard-coded clinical threshold (`HIGH_STRESS_THRESHOLD = TODO_EXPERT_REVIEW` + `CLINICAL_INTERPRETATION_LABELS = TODO_EXPERT_REVIEW` + 11 expert decision codes đều ở `TODO_EXPERT_REVIEW`).
+- ⚠️ No JPA entity exposed — OUT-OF-SCOPE cho T01 (DTO mapping thuộc G4-T12).
+- ✅ No preliminary risk = final risk (§6.8.1 "Ưu tiên `risk_state_history.final_risk_level`. `safety_events.risk_level` chỉ dùng audit, KHÔNG dùng thay thế").
+- ✅ No system timezone (§8.8 + §6.6.2 explicit "KHÔNG dùng `LocalDate.now()` / `ZoneId.systemDefault()`").
+
+**Database integrity cross-check** (11 schema elements):
+- ✅ `users.timezone` (V7 VARCHAR(50) NOT NULL DEFAULT 'UTC') referenced in §6.6.2 + §8.1 + Phụ lục A.
+- ✅ `daily_question_templates` (V6) referenced 5× (stress/mood/energy/sleep templates + scale_min/scale_max).
+- ✅ `daily_question_options` (V6) referenced in §6.2 mood option_value.
+- ✅ `daily_question_assignments` (V8) referenced 1× (template_version_id pattern).
+- ✅ `daily_question_answers` (V9) referenced 4× (numeric_value + option_value + answered_at).
+- ✅ `daily_question_templates.scale_min/scale_max` (V10) referenced 3×.
+- ✅ `behavioral_events` (V11) referenced 19× (12 event types including `CHAT_SESSION_STARTED`, `CHAT_MESSAGE_SENT`, `DAILY_CHECKIN_COMPLETED`, `DAILY_CHECKIN_SKIPPED`, etc.).
+- ✅ `safety_keyword_rules` (V13) referenced 4× (anxiety_signal supporting).
+- ✅ `risk_state_history` (V14) referenced 12× (max_risk source of truth + final_risk_level column).
+- ✅ `chat_analysis_results` (V16) referenced 21× (anxiety_signal source + topic/emotion/intent/signals JSONB + model_risk_level + confidence + schema_version).
+- ✅ `safety_events` (V17) referenced 4× (audit + secondary source for max_risk).
+
+**Frontend compatibility**: NO conflict với `docs/03_API_CONTRACT.yaml`. Deliverable dùng DB-column-level names (`stress_score`, `mood_score`, `engagement_score`, `max_risk_level`); API contract định nghĩa window-avg DTO names (`stressAvg7d`, `stressAvg30d`, `moodAvg7d`, `sleepAvg7d`, `energyAvg7d`, `anxietyAvg7d`, `engagementScore`, `riskLevel`). Đây là **2 abstraction levels khác nhau**, không phải conflict. Mapping DB column → API DTO là responsibility của T02 (typed schema) + T12 (dashboard API + integration), đã acknowledged trong deliverable §1 (Scope: T01 = vocabulary, T02 = typed schema, T12 = dashboard API).
+
+**Findings**:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| F-1 | LOW (intentional) | §17.10 stress raw scale 1-5 vs contract §8.1 ghi 1-10 | §10 B.1 documented; chốt (b) theo user direction 2026-08-04 |
+| F-2 | LOW (intentional) | §17.14 anxiety_signal formula = `CONFIG_PLACEHOLDER` | §10 B.2 documented; chốt (b) theo user direction 2026-08-04 |
+| F-3 | LOW (intentional) | §17.13 sleep_quality template chưa seed | §10 B.3 documented; chốt (b) theo user direction 2026-08-04 |
+| F-4 | N/A (out-of-scope) | Deliverable không reference API DTO field names | T02/T12 scope, T01 = vocabulary |
+| F-5 | **HIGH (pre-existing, carry-forward from G3-T13)** | L-env-1: `@SpringBootTest` context loading fails do `SafetyEventSource` JPA mismatch (`SafetyEventSource` là POJO nhưng `SafetyEventSourceRepository` khai báo `@Entity`). Ảnh hưởng mọi integration test. | OUT-OF-SCOPE G4-T01; yêu cầu hotfix `SafetyEventSource.java:1` thành `@Entity` (1-line change). |
+
+**Verification commands executed** (re-check Phase 3 deliverable integrity, 2026-08-04):
+- File size + line count: `Get-Item` 50501 bytes; `Get-Content | Measure-Object -Line` 1213 lines; `Format-Hex` first 3 bytes confirm UTF-8 no BOM.
+- H2 header count: 12 H2 (Purpose & Scope, Contract Versioning, Definitions, Null/Unknown/Zero/NOT_APPLICABLE, Feature Catalog, Per-Feature Specification, Explicit vs Inferred, Timezone & Local-Date, Late-Arriving Data, Open Expert Decisions, Test Cases, Acceptance Checklist) + 3 appendices (A: DB schema, B: cross-reference, C: change history).
+- Pattern grep: 18 occurrences `NUMERIC(4,3)` (normalized score types), 11 `Open Expert Decisions` rows, 5 calculation versions, 33 references `TODO_EXPERT_REVIEW`/`CONFIG_PLACEHOLDER`/`DEMO_ONLY` (proves no clinical threshold tự bịa).
+- Contract conflict markers: B.1, B.2, B.3 all present in deliverable §10 with full rationale.
+
+**Decision**: **APPROVE WITH FINDINGS**. Tất cả 25 mục §17 acceptance PASS, 3 mục DoD PASS, 5/5 security policy PASS, 11/11 DB schema element cross-check PASS, 0 frontend compatibility conflict. 3 contract conflicts (B.1/B.2/B.3) đã report đầy đủ theo contract §15 — không tự tạo field ngoài task. Finding duy nhất HIGH (F-5) là pre-existing regression carry-forward từ G3-T13 (`SafetyEventSource` JPA mismatch), nằm ngoài G4-T01 scope — không block verdict vì nó external cho T01 (T01 là tài liệu task, không phải code task). KHÔNG promote to PASS vì L-env-1 vẫn ảnh hưởng toàn bộ integration test suite — team cần xử lý F-5 trước khi G4-T02/T03 bắt đầu integration test thực sự.
+
+**Ready for G4-T02** (Thiết kế user_daily_features schema — typed columns). Recommend hotfix L-env-1 (`SafetyEventSource.java:1` thêm `@Entity` annotation) trong 1 commit riêng trước khi bắt đầu G4-T02 để integration test path sạch từ đầu. Sau khi T02 PASS, có thể promote T01 từ `APPROVE WITH FINDINGS` → `APPROVE` retroactively nếu team muốn.
+
+---
+
 
 # 8. Ready Tasks
 

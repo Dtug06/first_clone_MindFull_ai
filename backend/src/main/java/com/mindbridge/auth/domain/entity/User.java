@@ -44,6 +44,13 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
+    /**
+     * IANA timezone id (e.g. "Asia/Ho_Chi_Minh"), used to compute local_date for
+     * daily question assignments. Added in G2-T05.
+     */
+    @Column(nullable = false, length = 50)
+    private String timezone = "UTC";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -84,6 +91,10 @@ public class User {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public String getTimezone() {
+        return timezone;
     }
 
     public Instant getCreatedAt() {
@@ -127,6 +138,15 @@ public class User {
 
     void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    /**
+     * Updates the user's timezone. Called by future profile-update endpoints.
+     * For G2-T05 the timezone is read from the DB to compute local_date for
+     * daily question assignments.
+     */
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
     }
 
     public enum UserRole {

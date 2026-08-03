@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import MobileNavigation from '../../components/layout/MobileNavigation';
 import PageTransitionWrapper from '../../components/layout/PageTransitionWrapper';
 import JellyfishMascot from '../../components/ui/JellyfishMascot';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function UserLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { token } = useAuth();
+  const navigate = useNavigate();
+
+  if (!token) {
+    // Frontend guard mirrors backend's 401 contract — no token means no
+    // authenticated principal, so pages would only fail every request.
+    // Backend stays the source of truth for ownership/authz.
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full relative">
@@ -17,9 +27,9 @@ export default function UserLayout() {
       </div>
 
       {/* Mobile Navigation */}
-      <MobileNavigation 
-        isOpen={mobileNavOpen} 
-        onClose={() => setMobileNavOpen(false)} 
+      <MobileNavigation
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
       />
 
       {/* Desktop Navigation - only shows on lg+ */}
@@ -42,6 +52,20 @@ export default function UserLayout() {
                 {item.label}
               </a>
             ))}
+            {/* Sign out shortcut (visible only on authenticated layout) */}
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('mb:auth');
+                navigate('/auth', { replace: true });
+                window.location.reload();
+              }}
+              className="px-3 py-2 rounded-full text-sm font-medium text-textMuted hover:text-primary hover:bg-primary/5 transition-all whitespace-nowrap"
+              aria-label="Sign out"
+            >
+              <span className="mr-1">🚪</span>
+              Sign out
+            </button>
           </div>
         </div>
       </nav>
