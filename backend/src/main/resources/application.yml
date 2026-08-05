@@ -58,6 +58,20 @@ mindbridge:
   seed:
     run: ${MINDBRIDGE_SEED_RUN:false}
     scenario: ${MINDBRIDGE_SEED_SCENARIO:DEFAULT}
+  # --- G4-T05: Daily feature aggregation job (scheduler + CLI) ---
+  # enabled: master switch for the @Scheduled tick. CI/local default
+  # OFF so stock `mvn spring-boot:run` does nothing. Production
+  # flips it true via env: MINDBRIDGE_FEATURE_AGGREGATION_ENABLED=true.
+  # batchSize: page size used when iterating the ACTIVE user base.
+  feature-aggregation:
+    enabled: ${MINDBRIDGE_FEATURE_AGGREGATION_ENABLED:false}
+    batch-size: ${MINDBRIDGE_FEATURE_AGGREGATION_BATCH_SIZE:100}
+    # CLI runner (mirrors G2-T09 mindbridge.seed.run.*). Default false;
+    # CLI activates only when run.enabled=true and a valid
+    # run.target=USER:<uuid>:DATE:<YYYY-MM-DD> (or ALL / RANGE variants) is supplied.
+    run:
+      enabled: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_ENABLED:false}
+      target: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_TARGET:}
   # --- G3-T01: AI analysis provider selection ---
   # Values: "mock" (default, offline, deterministic) or "real" (external LLM, G3-T06).
   # Override via env: MINDBRIDGE_AI_PROVIDER=real.
@@ -146,3 +160,14 @@ mindbridge:
       # Default false: production stays strict. Local/dev profiles
       # can flip this via env: MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED=true.
       enabled: ${MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED:false}
+
+# --- G4-T12: Trend thresholds (TODO_EXPERT_REVIEW; close-out of T07 F-1) ---
+# Bound under `mindbridge.trend.*` and consumed by
+# `TrendConfigProperties` (G4-T12). Real values will be injected once the
+# expert review on `Pre_G4 §13.1` is signed off.
+# HIGH_STRESS_THRESHOLD is on the normalized 0-1 stress_score scale
+# (NOT the raw 1-10 stress_raw_value scale) — resolved G4-T07 Phase 3 F-1.
+trend:
+  min-trend-coverage: ${MIN_TREND_COVERAGE:0.5}
+  trend-delta-threshold: ${TREND_DELTA_THRESHOLD:0.1}
+  high-stress-threshold: ${HIGH_STRESS_THRESHOLD:0.75}

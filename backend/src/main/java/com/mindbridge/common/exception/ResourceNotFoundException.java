@@ -12,4 +12,13 @@ public class ResourceNotFoundException extends MindBridgeException {
                 resourceName + " with id '" + identifier + "' not found"
         );
     }
+
+    /**
+     * Caller-supplied error code (e.g. {@code BEHAVIOR_PROFILE_NOT_FOUND})
+     * and a custom message. Used when the default RESOURCE_NOT_FOUND code
+     * is too generic.
+     */
+    public ResourceNotFoundException(ErrorCode code, String message) {
+        super(code, message);
+    }
 }

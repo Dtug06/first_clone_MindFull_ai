@@ -322,6 +322,9 @@ paths:
       tags:
         - Behavior
       summary: Get current behavior profile
+      # G4-T12: bearerAuth required (T09 F-7 close-out).
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Current behavior profile
@@ -329,6 +332,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserBehaviorProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1062,19 +1069,46 @@ components:
         anxietyAvg7d:
           type: number
           nullable: true
-        engagementScore:
-          type: number
+        engagementScore7d:
+          type: integer
           nullable: true
+          minimum: 0
+          maximum: 3
+          description: >
+            MVP unweighted engagement activity score for the recent 7-day
+            window. Integer count of distinct active sources
+            (chat-message / chat-session / checkin-completed) - capped at 3
+            per (FEATURE_DICTIONARY §10.1, calculationVersion = "engagement_v1_unweighted_top_n_3").
+            Not persisted to user_daily_features; derived on demand by this endpoint.
+          x-todo-expert-review: ENGAGEMENT_COMPONENT_WEIGHTS
+        engagementScore30d:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 3
+          description: Same as engagementScore7d but over the recent 30-day window.
+          x-todo-expert-review: ENGAGEMENT_COMPONENT_WEIGHTS
         riskLevel:
           $ref: "#/components/schemas/RiskLevel"
-        dominantTopics:
+        dominantTopics7d:
           type: array
+          description: Top-N dominant topics for the recent 7-day window. N = 3 (MVP).
+          maxItems: 3
           items:
-            type: string
+            $ref: "#/components/schemas/DominantTopic"
+        dominantTopics30d:
+          type: array
+          description: Top-N dominant topics for the recent 30-day window. N = 3 (MVP).
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/DominantTopic"
         trendSummary:
-          type: object
-          additionalProperties:
-            type: string
+          # G4-T12: was `object + additionalProperties: string` (T09). Now a
+          # nested typed object so the dashboard can render direction /
+          # deltaPct / streakInfo without parsing strings. The placeholder
+          # `TrendSummary.empty(...)` returns the same shape with `entries=[]`
+          # if the snapshot row cannot be deserialized.
+          $ref: "#/components/schemas/TrendSummaryResponse"
         dataCoverage:
           type: number
           minimum: 0
@@ -1086,6 +1120,179 @@ components:
         calculatedAt:
           type: string
           format: date-time
+
+    DominantTopic:
+      type: object
+      description: >
+        Single dominant-topic summary row, used in
+        UserBehaviorProfileResponse.dominantTopics7d / dominantTopics30d.
+        Topic codes are the closed taxonomy values from
+        docs/schemas/chat_analysis_v1.dictionary.md
+        (WORK_STRESS / RELATIONSHIP / FAMILY / HEALTH / FINANCE / SLEEP / OTHER).
+      required:
+        - topic
+        - frequency
+        - share
+      properties:
+        topic:
+          type: string
+          maxLength: 40
+          description: Raw chat_analysis_results.topic enum name; not masked.
+        frequency:
+          type: integer
+          minimum: 0
+          description: >
+            Count of distinct ACTIVE chat_analysis_results rows with this
+            topic in the window. Rerun-aware (SUPERSEDED rows excluded).
+        share:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: >
+            This topic's fraction of total qualifying topic occurrences
+            in the window, rounded to 4 decimals HALF_UP. Sum of share
+            over one result list is approximately 1.0.
+        x-todo-expert-review: MIN_TOPIC_CONFIDENCE
+
+    TrendSummaryResponse:
+      type: object
+      description: >
+        G4-T12 nested trend + streak summary returned by
+        `GET /api/v1/behavior/profile` as `UserBehaviorProfileResponse.trendSummary`.
+        Replaces the prior flat `Map<String,String>` shape (T09) with typed
+        fields so the dashboard can render `direction` / `deltaPct` /
+        `streakInfo` without parsing strings. 8 entries for the 8 MVP features
+        (incl. `exercise_completion` as UNKNOWN + NOT_APPLICABLE).
+        `calculationVersion` is always "trend_v1" until the formula changes.
+      required:
+        - userId
+        - targetDate
+        - zoneId
+        - entries
+        - dataQuality
+        - calculationVersion
+      properties:
+        userId:
+          type: string
+          format: uuid
+        targetDate:
+          type: string
+          format: date
+        zoneId:
+          type: string
+          description: IANA ZoneId (e.g. "Asia/Ho_Chi_Minh"); null if unknown.
+          nullable: true
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendEntryResponse"
+          minItems: 0
+          maxItems: 8
+        streak:
+          $ref: "#/components/schemas/StreakInfoResponse"
+        dataQuality:
+          type: string
+          description: >
+            Placeholder string for T11 alignment. Always "TODO_T11_ALIGNED"
+            until G4-T11 defines DATA_QUALITY_THRESHOLDS. NEVER null.
+        calculationVersion:
+          type: string
+          example: trend_v1
+
+    TrendEntryResponse:
+      type: object
+      description: >
+        Per-feature trend row. `null` vs `0` semantics:
+          * recentAvg == null  => no data in recent window (do NOT coerce to 0)
+          * priorAvg == null OR priorAvg == 0 => direction=UNKNOWN,
+            reason=NO_PRIOR_DATA (avoids divide-by-zero in delta math)
+          * deltaPct == null when undefined (prior == 0 / null / UNKNOWN)
+      required:
+        - featureCode
+        - direction
+        - reason
+        - recentAvg
+        - priorAvg
+        - recentCoverage
+        - priorCoverage
+      properties:
+        featureCode:
+          type: string
+          enum:
+            - stress
+            - mood
+            - energy
+            - sleep
+            - anxiety_signal
+            - engagement
+            - exercise_completion
+            - max_risk
+        direction:
+          type: string
+          enum:
+            - UP
+            - DOWN
+            - STABLE
+            - UNKNOWN
+        deltaPct:
+          type: number
+          nullable: true
+          description: Signed ratio (recent - prior) / prior; null when undefined.
+        reason:
+          type: string
+          enum:
+            - SUFFICIENT_DATA
+            - INSUFFICIENT_RECENT_COVERAGE
+            - INSUFFICIENT_PRIOR_COVERAGE
+            - NO_RECENT_DATA
+            - NO_PRIOR_DATA
+            - NOT_APPLICABLE
+        recentAvg:
+          type: number
+          nullable: true
+        priorAvg:
+          type: number
+          nullable: true
+        recentCoverage:
+          type: number
+          minimum: 0
+          maximum: 1
+        priorCoverage:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    StreakInfoResponse:
+      type: object
+      description: >
+        Streak snapshot for the user. `checkInStreak` and `highStressStreak`
+        count back from `targetDate`. Both are 0 when `targetDate` does not
+        meet the respective threshold. `streakWindowDays` is the cap applied
+        (default 30 per G4-T07).
+      required:
+        - checkInStreak
+        - highStressStreak
+        - streakWindowDays
+      properties:
+        checkInStreak:
+          type: integer
+          minimum: 0
+          maximum: 30
+        highStressStreak:
+          type: integer
+          minimum: 0
+          maximum: 30
+        lastCheckInDate:
+          type: string
+          format: date
+          nullable: true
+        lastHighStressDate:
+          type: string
+          format: date
+          nullable: true
+        streakWindowDays:
+          type: integer
+          example: 30
 
     MatchingCandidateResponse:
       type: object

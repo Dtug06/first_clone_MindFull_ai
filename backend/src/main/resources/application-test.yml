@@ -49,3 +49,15 @@ logging:
     # G1-T03: surface HikariCP pool init in test logs so the smoke
     # test gives visible evidence of datasource wiring.
     com.zaxxer.hikari: DEBUG
+
+# G4-T05: feature aggregation job config for tests
+mindbridge:
+  feature-aggregation:
+    enabled: true
+    batch-size: 10
+  # G4-T12: trend thresholds for tests (same placeholder values as production;
+  # override via env vars in CI per-test if needed).
+  trend:
+    min-trend-coverage: 0.5
+    trend-delta-threshold: 0.1
+    high-stress-threshold: 0.75
