@@ -1,0 +1,76 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  # G1-T05: clean 404 instead of Spring's default white-label
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+  # --- G1-T03: in-memory H2 so Surefire can boot context without a
+  # local PostgreSQL. MODE=PostgreSQL keeps dialect behaviour close to
+  # PG so future Flyway migrations (T04) can also be exercised in tests.
+  datasource:
+    url: jdbc:h2:mem:mindbridge_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      # Dialect is auto-detected by Hibernate from the JDBC driver;
+      # setting it explicitly triggers a HHH90000025 deprecation WARN.
+
+  # G1-T04: H2 does not support PostgreSQL extensions (citext/pgcrypto),
+  # so Flyway must not run against the test H2 in-memory DB. The test
+  # profile uses JPA `ddl-auto=none`; JPA schema for tests lands in T06+
+  # when the first entity ships.
+  flyway:
+    enabled: false
+
+# G1-T06: Test JWT — fixed secret so tests are deterministic.
+# NEVER use this value in production.
+jwt:
+  secret: this-is-a-test-secret-key-for-unit-tests-only-minimum-32-chars
+  access-token-expiration-ms: 3600000
+
+logging:
+  level:
+    root: WARN
+    com.mindbridge: INFO
+    org.springframework: WARN
+    # G1-T03: surface HikariCP pool init in test logs so the smoke
+    # test gives visible evidence of datasource wiring.
+    com.zaxxer.hikari: DEBUG
+
+# G4-T05: feature aggregation job config for tests
+mindbridge:
+  # The isolated H2 runtime does not execute PostgreSQL Flyway V6, so provide
+  # the same approved MVP catalog for manual frontend/backend smoke testing.
+  # Production/local PostgreSQL profiles continue to use Flyway as source of truth.
+  daily-question:
+    bootstrap-approved-templates: ${MINDBRIDGE_DAILY_QUESTION_BOOTSTRAP_APPROVED_TEMPLATES:true}
+  feature-aggregation:
+    enabled: true
+    batch-size: 10
+  # G4-T12: trend thresholds for tests (same placeholder values as production;
+  # override via env vars in CI per-test if needed).
+  trend:
+    min-trend-coverage: 0.5
+    trend-delta-threshold: 0.1
+    high-stress-threshold: 0.75
+  # DEMO_ONLY test fixtures. These are not production or clinical defaults.
+  data-quality:
+    min-coverage-for-low: 0.20
+    min-coverage-for-sufficient: 0.50
+    min-confidence: 0.30
+  # Allow the local Vite frontend during isolated H2 smoke testing.
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}

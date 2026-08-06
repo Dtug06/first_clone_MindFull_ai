@@ -1,0 +1,382 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import RiskLevelBadge from '../../components/ui/RiskLevelBadge';
+import {
+  ArrowLeft, Clock, Shield, AlertTriangle, MessageSquare,
+  FileText, CheckCircle2, XCircle, Loader2, Send, User
+} from 'lucide-react';
+import { useAuth } from '../../auth/AuthContext';
+import type { SubmitReviewRequest } from '../../api/expertReview';
+import type {
+  SafetyEventDetail, SafetyEventStatus, ExpertReviewDecision,
+  ExpertReviewResponse,
+} from '../../types';
+
+const STATUS_LABELS: Record<SafetyEventStatus, string> = {
+  OPEN: 'Open',
+  UNDER_REVIEW: 'Under Review',
+  RESOLVED: 'Resolved',
+  DISMISSED: 'Dismissed',
+};
+
+const DECISION_OPTIONS: { value: ExpertReviewDecision; label: string; description: string }[] = [
+  { value: 'CONFIRM_RISK',     label: 'Confirm Risk',     description: 'Confirm the system risk assessment is accurate' },
+  { value: 'DOWNGRADE_RISK',   label: 'Downgrade Risk',   description: 'The risk level should be lower than assessed' },
+  { value: 'ESCALATE',         label: 'Escalate',          description: 'Escalate to a higher level of review or external support' },
+  { value: 'NO_ACTION',        label: 'No Action',        description: 'No action required; close the event' },
+  { value: 'CONTINUE_MONITORING', label: 'Continue Monitoring', description: 'Routine monitoring should continue' },
+  { value: 'REQUEST_FOLLOWUP', label: 'Request Follow-up', description: 'Request a follow-up check with the user' },
+  { value: 'DISMISS',          label: 'Dismiss',           description: 'Dismiss this event (requires a note)' },
+];
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  CHAT_ANALYSIS: 'Chat Analysis',
+  DAILY_ANSWER: 'Daily Check-in',
+  EXERCISE_SUBMISSION: 'Exercise Submission',
+  PROGRAM_ASSESSMENT: 'Program Assessment',
+};
+
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  SHOW_TEMPLATE: 'Show Template',
+  BLOCK_MATCHING: 'Block Matching',
+  FLAG_REVIEW: 'Flag for Review',
+  PAUSE_PROGRAM: 'Pause Program',
+};
+
+export default function ExpertCaseDetail() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const { expertReviewApi } = useAuth();
+  const navigate = useNavigate();
+
+  const [event, setEvent] = useState<SafetyEventDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Review form state
+  const [selectedDecision, setSelectedDecision] = useState<ExpertReviewDecision | null>(null);
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!eventId) return;
+    expertReviewApi.getEventDetail(eventId)
+      .then(setEvent)
+      .catch(() => setError('Failed to load event. Please try again.'))
+      .finally(() => setLoading(false));
+  }, [eventId, expertReviewApi]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDecision || !eventId) return;
+
+    // Validate note required for DISMISS
+    if (selectedDecision === 'DISMISS' && !note.trim()) {
+      setSubmitError('A note is required when dismissing an event.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const payload: SubmitReviewRequest = {
+      decision: selectedDecision,
+      note: note.trim() || undefined,
+    };
+
+    try {
+      await expertReviewApi.submitReview(eventId, payload);
+      // Refresh event detail
+      const updated = await expertReviewApi.getEventDetail(eventId);
+      setEvent(updated);
+      setSelectedDecision(null);
+      setNote('');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 409) {
+        setSubmitError('You have already submitted a review for this event.');
+      } else {
+        setSubmitError('Failed to submit review. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => navigate('/expert/cases')}
+          className="flex items-center gap-2 text-textMuted hover:text-textMain transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Cases
+        </button>
+        <p className="text-red-500">{error ?? 'Event not found.'}</p>
+      </div>
+    );
+  }
+
+  const isClosed = event.status === 'RESOLVED' || event.status === 'DISMISSED';
+
+  return (
+    <div className="space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/expert/cases')}
+        className="flex items-center gap-2 text-textMuted hover:text-textMain transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Cases
+      </button>
+
+      {/* Event header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100"
+      >
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <h1 className="text-xl font-semibold text-textMain">
+                Event #{event.id.slice(0, 8)}
+              </h1>
+              <RiskLevelBadge level={event.riskLevel} />
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                event.status === 'OPEN' ? 'bg-orange-100 text-orange-700' :
+                event.status === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-700' :
+                event.status === 'RESOLVED' ? 'bg-green-100 text-green-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {STATUS_LABELS[event.status]}
+              </span>
+            </div>
+            <p className="text-sm text-textMuted mb-4 max-w-2xl">
+              {event.summary ?? 'No summary available.'}
+            </p>
+            <div className="flex flex-wrap gap-4 text-xs text-textMuted">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Detected: {new Date(event.createdAt).toLocaleString()}
+              </span>
+              {event.resolvedAt && (
+                <span className="flex items-center gap-1">
+                  Resolved: {new Date(event.resolvedAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Three-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sources */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-surface rounded-2xl p-5 shadow-soft border border-gray-100"
+        >
+          <h2 className="text-sm font-semibold text-textMain mb-4 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary" />
+            Sources
+          </h2>
+          {event.sources.length === 0 ? (
+            <p className="text-sm text-textMuted">No sources recorded.</p>
+          ) : (
+            <ul className="space-y-3">
+              {event.sources.map(source => (
+                <li key={source.id} className="flex items-start gap-3 text-sm">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 text-orange-400 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-textMain">
+                      {SOURCE_TYPE_LABELS[source.sourceType] ?? source.sourceType}
+                    </p>
+                    <p className="text-xs text-textMuted">
+                      {new Date(source.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </motion.div>
+
+        {/* Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-surface rounded-2xl p-5 shadow-soft border border-gray-100"
+        >
+          <h2 className="text-sm font-semibold text-textMain mb-4 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" />
+            Actions Taken
+          </h2>
+          {event.actions.length === 0 ? (
+            <p className="text-sm text-textMuted">No actions recorded.</p>
+          ) : (
+            <ul className="space-y-3">
+              {event.actions.map(action => (
+                <li key={action.id} className="text-sm">
+                  <div className="flex items-start gap-3">
+                    {action.status === 'SUCCEEDED' ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    ) : action.status === 'FAILED' ? (
+                      <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-medium text-textMain">
+                        {ACTION_TYPE_LABELS[action.actionType] ?? action.actionType}
+                      </p>
+                      <p className="text-xs text-textMuted capitalize">
+                        {action.status.toLowerCase().replace('_', ' ')}
+                        {action.executedAt && ` at ${new Date(action.executedAt).toLocaleString()}`}
+                      </p>
+                      {action.errorMessage && (
+                        <p className="text-xs text-red-500 mt-1">{action.errorMessage}</p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </motion.div>
+
+        {/* Previous Reviews */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-surface rounded-2xl p-5 shadow-soft border border-gray-100"
+        >
+          <h2 className="text-sm font-semibold text-textMain mb-4 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            Expert Reviews ({event.reviews.length})
+          </h2>
+          {event.reviews.length === 0 ? (
+            <p className="text-sm text-textMuted">No reviews yet.</p>
+          ) : (
+            <ul className="space-y-4">
+              {event.reviews.map((review: ExpertReviewResponse) => (
+                <li key={review.id} className="text-sm border-b border-gray-100 pb-3 last:border-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="w-3 h-3 text-textMuted" />
+                    <span className="font-medium text-textMain">
+                      {review.reviewerDisplayName}
+                    </span>
+                    <span className="text-xs text-textMuted">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium mb-1 ${
+                    review.decision === 'ESCALATE' ? 'bg-red-100 text-red-700' :
+                    review.decision === 'DISMISS' ? 'bg-gray-100 text-gray-700' :
+                    review.decision === 'CONFIRM_RISK' ? 'bg-orange-100 text-orange-700' :
+                    'bg-blue-100 text-blue-700'
+                  }`}>
+                    {review.decision.replace(/_/g, ' ')}
+                  </span>
+                  {review.note && (
+                    <p className="text-xs text-textMuted mt-1 italic">{review.note}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Review submission form */}
+      {!isClosed && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100"
+        >
+          <h2 className="text-sm font-semibold text-textMain mb-4 flex items-center gap-2">
+            <Send className="w-4 h-4 text-primary" />
+            Submit Review Decision
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {DECISION_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSelectedDecision(opt.value)}
+                  className={`text-left p-3 rounded-xl border transition-all ${
+                    selectedDecision === opt.value
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+                  }`}
+                >
+                  <p className={`text-sm font-medium ${
+                    selectedDecision === opt.value ? 'text-primary' : 'text-textMain'
+                  }`}>
+                    {opt.label}
+                  </p>
+                  <p className="text-xs text-textMuted mt-0.5">{opt.description}</p>
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-textMain mb-1">
+                Note {selectedDecision === 'DISMISS' && <span className="text-red-500">*</span>}
+              </label>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder={
+                  selectedDecision === 'DISMISS'
+                    ? 'Required: explain why this event should be dismissed...'
+                    : 'Optional: add any additional notes...'
+                }
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+              />
+            </div>
+
+            {submitError && (
+              <p className="text-sm text-red-500">{submitError}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={!selectedDecision || submitting}
+              className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Submit Review
+                </>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      )}
+    </div>
+  );
+}

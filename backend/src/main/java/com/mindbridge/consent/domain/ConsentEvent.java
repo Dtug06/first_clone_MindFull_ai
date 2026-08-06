@@ -1,0 +1,116 @@
+package com.mindbridge.consent.domain;
+
+import com.mindbridge.consent.domain.enums.ConsentAction;
+import com.mindbridge.consent.domain.enums.ConsentType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+/**
+ * JPA entity for the {@code consent_events} table.
+ *
+ * APPEND-ONLY by design:
+ * - No setters on mutable fields (created fields only)
+ * - Setters are intentionally omitted — entities are created via {@link #record()}
+ *   and never updated or deleted by the application.
+ * - The DB-level CHECK constraints reject invalid {@link ConsentType} / {@link ConsentAction} values.
+ *
+ * Each grant or revocation inserts a new row. The current state is derived by
+ * taking the latest event per (userId, consentType) by occurredAt.
+ */
+@Entity
+@Table(name = "consent_events")
+public class ConsentEvent {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "consent_type", nullable = false, length = 50)
+    private ConsentType consentType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ConsentAction action;
+
+    @Column(name = "policy_version", nullable = false, length = 50)
+    private String policyVersion;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String metadata;
+
+    @Column(name = "occurred_at", nullable = false, updatable = false)
+    private Instant occurredAt;
+
+    protected ConsentEvent() {
+    }
+
+    private ConsentEvent(UUID userId, ConsentType consentType, ConsentAction action,
+                         String policyVersion, String metadata) {
+        this.userId = userId;
+        this.consentType = consentType;
+        this.action = action;
+        this.policyVersion = policyVersion;
+        this.metadata = metadata;
+    }
+
+    @PrePersist
+    void onCreate() {
+        if (this.occurredAt == null) {
+            this.occurredAt = Instant.now();
+        }
+    }
+
+    /**
+     * Factory method for creating a new consent event.
+     * This is the only way to insert a row — there are no setters for mutable fields.
+     */
+    public static ConsentEvent record(UUID userId, ConsentType consentType,
+                                      ConsentAction action, String policyVersion,
+                                      String metadata) {
+        return new ConsentEvent(userId, consentType, action, policyVersion, metadata);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public ConsentType getConsentType() {
+        return consentType;
+    }
+
+    public ConsentAction getAction() {
+        return action;
+    }
+
+    public String getPolicyVersion() {
+        return policyVersion;
+    }
+
+    public String getMetadata() {
+        return metadata;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+}

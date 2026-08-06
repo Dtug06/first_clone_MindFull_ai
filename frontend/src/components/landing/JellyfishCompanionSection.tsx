@@ -1,8 +1,17 @@
 import { motion } from 'framer-motion';
 import JellyfishMascot from '../ui/JellyfishMascot';
 import FloatingJellyfishBackground from '../ui/FloatingJellyfishBackground';
+import { useLanguage } from '../../i18n';
 
 export default function JellyfishCompanionSection() {
+  const { t } = useLanguage();
+
+  const companionFeatures = [
+    { label: t.landing.companionCalm, desc: t.landing.companionCalmDesc },
+    { label: t.landing.companionEmpathy, desc: t.landing.companionEmpathyDesc },
+    { label: t.landing.companionSafe, desc: t.landing.companionSafeDesc },
+  ];
+
   return (
     <section className="py-24 bg-gradient-to-br from-oceanDeep to-oceanDeep/90 relative overflow-hidden text-white">
       {/* Background elements */}
@@ -79,24 +88,17 @@ export default function JellyfishCompanionSection() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <h2 className="text-3xl md:text-4xl font-semibold mb-6 text-white">
-              Meet your gentle guide
+              {t.landing.companionTitle}
             </h2>
             <p className="text-lg text-white/80 mb-6 leading-relaxed">
-              Our jellyfish companion represents everything MindBridge AI stands for: 
-              calmness, emotional flow, and soft guidance through life's challenges.
+              {t.landing.companionP1}
             </p>
             <p className="text-white/70 mb-8 leading-relaxed">
-              Like a jellyfish floating peacefully in deep waters, this companion 
-              offers a bridge between loneliness and help — always gentle, never 
-              judgmental, and always there when you need support.
+              {t.landing.companionP2}
             </p>
 
             <div className="space-y-4">
-              {[
-                { label: "Always calm", desc: "No rush, no pressure" },
-                { label: "Deeply empathetic", desc: "Understanding emotions" },
-                { label: "Safely guided", desc: "Expert oversight" },
-              ].map((item, i) => (
+              {companionFeatures.map((item, i) => (
                 <motion.div
                   key={i}
                   className="flex items-center gap-4"

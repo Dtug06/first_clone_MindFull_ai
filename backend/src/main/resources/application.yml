@@ -1,0 +1,199 @@
+spring:
+  application:
+    name: mindbridge-backend
+  profiles:
+    active: local
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+# --- G1-T06: JWT authentication ---
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration-ms: ${JWT_EXPIRATION:3600000}
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+  info:
+    env:
+      enabled: false
+
+# --- G1-T10: OpenAPI / Swagger UI ---
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  # Default for production-like profiles: enabled. Tests/profile `test` can
+  # override per-profile if needed.
+  show-actuator: false
+
+# --- G1-T10: CORS allowed origins (per-profile) ---
+mindbridge:
+  cors:
+    allowed-origins: []
+  # --- G2-T09: Dev seed (dev tooling only) ---
+  # Set --mindbridge.seed.run=true via CLI/env to trigger a deterministic
+  # demo dataset. Default false => never runs during `mvn spring-boot:run`.
+  # Profile `prod` is rejected at runtime even when this flag is set.
+  seed:
+    run: ${MINDBRIDGE_SEED_RUN:false}
+    scenario: ${MINDBRIDGE_SEED_SCENARIO:DEFAULT}
+  # --- G4-T05: Daily feature aggregation job (scheduler + CLI) ---
+  # enabled: master switch for the @Scheduled tick. CI/local default
+  # OFF so stock `mvn spring-boot:run` does nothing. Production
+  # flips it true via env: MINDBRIDGE_FEATURE_AGGREGATION_ENABLED=true.
+  # batchSize: page size used when iterating the ACTIVE user base.
+  feature-aggregation:
+    enabled: ${MINDBRIDGE_FEATURE_AGGREGATION_ENABLED:false}
+    batch-size: ${MINDBRIDGE_FEATURE_AGGREGATION_BATCH_SIZE:100}
+    # CLI runner (mirrors G2-T09 mindbridge.seed.run.*). Default false;
+    # CLI activates only when run.enabled=true and a valid
+    # run.target=USER:<uuid>:DATE:<YYYY-MM-DD> (or ALL / RANGE variants) is supplied.
+    run:
+      enabled: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_ENABLED:false}
+      target: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_TARGET:}
+  # G4-T09 current-profile aggregation. Disabled until expert-reviewed
+  # trend and data-quality thresholds are supplied.
+  profile-aggregation:
+    enabled: ${MINDBRIDGE_PROFILE_AGGREGATION_ENABLED:false}
+    schedule-cron: ${MINDBRIDGE_PROFILE_AGGREGATION_SCHEDULE_CRON:0 15 3 * * *}
+    batch-size: ${MINDBRIDGE_PROFILE_AGGREGATION_BATCH_SIZE:100}
+    run:
+      enabled: ${MINDBRIDGE_PROFILE_AGGREGATION_RUN_ENABLED:false}
+      target: ${MINDBRIDGE_PROFILE_AGGREGATION_RUN_TARGET:}
+  # TODO_EXPERT_REVIEW: deliberately no numeric production defaults.
+  data-quality:
+    min-coverage-for-low: ${MINDBRIDGE_DATA_QUALITY_MIN_COVERAGE_LOW:}
+    min-coverage-for-sufficient: ${MINDBRIDGE_DATA_QUALITY_MIN_COVERAGE_SUFFICIENT:}
+    min-confidence: ${MINDBRIDGE_DATA_QUALITY_MIN_CONFIDENCE:}
+  # TODO_EXPERT_REVIEW: deliberately no numeric production defaults.
+  trend:
+    min-trend-coverage: ${MIN_TREND_COVERAGE:}
+    trend-delta-threshold: ${TREND_DELTA_THRESHOLD:}
+    high-stress-threshold: ${HIGH_STRESS_THRESHOLD:}
+  # --- G3-T01: AI analysis provider selection ---
+  # Values: "mock" (default, offline, deterministic) or "real" (external LLM, G3-T06).
+  # Override via env: MINDBRIDGE_AI_PROVIDER=real.
+  # Optional: force a specific Mock scenario for ops/tests via
+  # MINDBRIDGE_AI_MOCK_SCENARIO (LEVEL_1_NORMAL|LEVEL_2_FOLLOWUP|LEVEL_3_HIGH_RISK|
+  # LEVEL_4_EMERGENCY|TIMEOUT|MALFORMED_JSON).
+  ai:
+    provider: ${MINDBRIDGE_AI_PROVIDER:mock}
+    mock:
+      force-scenario: ${MINDBRIDGE_AI_MOCK_SCENARIO:}
+    # --- G3-T09: Risk classifier provider selection (Safety pipeline, distinct from chat analysis) ---
+    # Values: "mock" (default, offline, deterministic) or "real" (future, post-MVP).
+    # Override via env: MINDBRIDGE_AI_RISK_CLASSIFIER_PROVIDER=real.
+    # Optional: force a specific Mock scenario for ops/tests via
+    # MINDBRIDGE_AI_RISK_CLASSIFIER_MOCK_SCENARIO (same enum values as chat analysis).
+    risk-classifier:
+      provider: ${MINDBRIDGE_AI_RISK_CLASSIFIER_PROVIDER:mock}
+      mock:
+        force-scenario: ${MINDBRIDGE_AI_RISK_CLASSIFIER_MOCK_SCENARIO:}
+    # --- G3-T04: AI analysis run lifecycle (provider/model label captured per run) ---
+    # provider-label: the value written to ai_analysis_runs.provider.
+    #   Default mirrors `mindbridge.ai.provider` (mock | real).
+    # mock-model: the model label written to ai_analysis_runs.model when the
+    #   mock provider is in use (always "MOCK_V1" for tests; overridden for
+    #   real provider).
+    # prompt-version: the value written to ai_analysis_runs.prompt_version.
+    #   Default is the v1 prompt short hash recorded in
+    #   docs/prompts/chat_analysis_prompt_v1.md (v1:5363675e22fe).
+    analysis-run:
+      provider-label: ${MINDBRIDGE_AI_RUN_PROVIDER_LABEL:mock}
+      mock-model: ${MINDBRIDGE_AI_RUN_MOCK_MODEL:MOCK_V1}
+      prompt-version: ${MINDBRIDGE_AI_RUN_PROMPT_VERSION:v1:5363675e22fe}
+    # --- G3-T06: Real LLM provider (OpenAI per Q1) ---
+    # Activated by setting MINDBRIDGE_AI_PROVIDER=real (and setting the API
+    # key env var). All values below are read from environment variables so
+    # no secret is ever stored in this file.
+    #
+    # The bean factory at startup fails fast with a clear message if any
+    # required value is blank or if the API key env var is unset.
+    real:
+      provider-label: ${MINDBRIDGE_AI_REAL_PROVIDER_LABEL:openai}
+      api-base-url: ${MINDBRIDGE_AI_REAL_API_BASE_URL:https://api.openai.com/v1}
+      # Name of the env var that holds the API key. The value of the
+      # env var is dereferenced at request time (via System.getenv) —
+      # NEVER inline an API key here or anywhere in the repo.
+      api-key-env-var: ${MINDBRIDGE_AI_REAL_API_KEY_ENV_VAR:MINDBRIDGE_AI_REAL_API_KEY}
+      # Concrete model name to call (e.g. gpt-4o-mini). The real
+      # provider also persists whatever the upstream echoes back, so
+      # audit can detect snapshot-alias drift.
+      model: ${MINDBRIDGE_AI_REAL_MODEL:gpt-4o-mini}
+      max-tokens: ${MINDBRIDGE_AI_REAL_MAX_TOKENS:1024}
+      # --- G3-T07: DEPRECATED aliases ---
+      # `mindbridge.ai.real.max-retries` and
+      # `mindbridge.ai.real.request-timeout-ms` are kept here as deprecated
+      # aliases for backwards compatibility with G3-T06 deployments.
+      # New deployments should use the shared namespace under
+      # `mindbridge.ai.provider.retry.*` (read by both the chat analysis
+      # and the risk-classifier pipelines).
+      max-retries: ${MINDBRIDGE_AI_REAL_MAX_RETRIES:1}
+      request-timeout-ms: ${MINDBRIDGE_AI_REAL_REQUEST_TIMEOUT_MS:20000}
+    # Conversational response generation is separate from structured analysis
+    # and the independent risk classifier. MINDBRIDGE_AI_PROVIDER=real enables
+    # both analysis and conversation unless this provider is overridden.
+    response:
+      provider: ${MINDBRIDGE_AI_RESPONSE_PROVIDER:${MINDBRIDGE_AI_PROVIDER:mock}}
+      # Responses API endpoint; may point to an approved OpenAI-compatible gateway.
+      api-base-url: ${MINDBRIDGE_AI_RESPONSE_API_BASE_URL:${MINDBRIDGE_AI_REAL_API_BASE_URL:https://api.openai.com/v1}}
+      model: ${MINDBRIDGE_AI_RESPONSE_MODEL:gpt-5.5}
+      max-output-tokens: ${MINDBRIDGE_AI_RESPONSE_MAX_OUTPUT_TOKENS:600}
+      reasoning-effort: ${MINDBRIDGE_AI_RESPONSE_REASONING_EFFORT:low}
+      request-timeout-ms: ${MINDBRIDGE_AI_RESPONSE_REQUEST_TIMEOUT_MS:60000}
+    # --- G3-T07: shared retry / fallback namespace ---
+    # Applied to BOTH ChatAnalysisProvider (chat pipeline) and
+    # RiskClassifierProvider (Safety pipeline). The values below
+    # are the canonical defaults — the deprecated aliases above
+    # are still read by RealLlmChatAnalysisProvider for now.
+    # When the deprecated aliases are removed (planned post-MVP)
+    # this block becomes the single source of truth.
+  pipeline:
+    retry:
+      # Total attempts including the first call. 1 = no retry, 2 = one retry.
+      # Bounded per the G3-T07 rule "không retry vô hạn".
+      # Falls back to `mindbridge.ai.real.max-retries` if unset
+      # (handled in RealLlmChatAnalysisProvider for backwards compat).
+      max-attempts: ${MINDBRIDGE_AI_PROVIDER_RETRY_MAX_ATTEMPTS:1}
+      # Initial backoff in ms. Doubles on each subsequent retry
+      # (200 → 400 → 800 …) until exhausted.
+      initial-backoff-ms: ${MINDBRIDGE_AI_PROVIDER_RETRY_INITIAL_BACKOFF_MS:200}
+      # Per-attempt HTTP timeout in ms. Falls back to
+      # `mindbridge.ai.real.request-timeout-ms` if unset.
+      request-timeout-ms: ${MINDBRIDGE_AI_PROVIDER_RETRY_REQUEST_TIMEOUT_MS:20000}
+    fallback:
+      # When true and all retries are exhausted (or an
+      # Invalid*OutputException occurred on the LAST attempt), the
+      # executor invokes the mock provider once. The resulting row
+      # is persisted with provider = "fallback-mock".
+      # Default false: production stays strict. Local/dev profiles
+      # can flip this via env: MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED=true.
+      enabled: ${MINDBRIDGE_AI_PROVIDER_FALLBACK_ENABLED:false}
+
+# --- G4-T12: Trend thresholds (TODO_EXPERT_REVIEW; close-out of T07 F-1) ---
+# Bound under `mindbridge.trend.*` and consumed by
+# `TrendConfigProperties` (G4-T12). Real values will be injected once the
+# expert review on `Pre_G4 §13.1` is signed off.
+# HIGH_STRESS_THRESHOLD is on the normalized 0-1 stress_score scale
+# (NOT the raw 1-10 stress_raw_value scale) — resolved G4-T07 Phase 3 F-1.

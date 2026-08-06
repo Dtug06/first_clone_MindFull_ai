@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mindbridge.local/schemas/chat_analysis_v1.schema.json",
+  "title": "ChatAnalysisOutput",
+  "description": "Classpath copy of docs/schemas/chat_analysis_v1.schema.json for JUnit tests. KEEP IN SYNC with the canonical file under docs/schemas/. The schema test (ChatAnalysisOutputSchemaTest) asserts every primitive property carries a description, so missing descriptions here fail CI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "topic",
+    "emotion",
+    "intent",
+    "signals",
+    "modelRiskLevel",
+    "confidence",
+    "evidenceSpans",
+    "latencyMs",
+    "errorCode",
+    "schemaVersion"
+  ],
+  "properties": {
+    "topic": {
+      "type": "string",
+      "enum": ["WORK_STRESS", "RELATIONSHIP", "FAMILY", "HEALTH", "FINANCE", "SLEEP", "OTHER"],
+      "description": "Dominant subject the user is talking about. NOT a clinical label."
+    },
+    "emotion": {
+      "type": "string",
+      "enum": ["NEUTRAL", "HAPPY", "ANXIOUS", "SAD", "OVERWHELMED", "DISTRESS", "ANGRY"],
+      "description": "Dominant emotional tone observed. DISTRESS is safety-relevant."
+    },
+    "intent": {
+      "type": "string",
+      "enum": ["VENT", "ADVICE", "INFO", "SUPPORT"],
+      "description": "What the user appears to want from the chat. NOT a final action decision."
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["FATIGUE", "SLEEP_DISRUPTION", "ISOLATION", "HOPELESSNESS", "BURNOUT", "SELF_HARM_RISK", "CONFLICT", "GRIEF", "OTHER"]
+      },
+      "description": "Behaviour-level tags attached to the message."
+    },
+    "modelRiskLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Model's own risk signal (1=normal, 2=follow-up, 3=high risk, 4=emergency). NOT the final risk level."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Self-reported confidence in [0.0, 1.0]."
+    },
+    "evidenceSpans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start", "end", "textHash"],
+        "properties": {
+          "start": { "type": "integer", "minimum": 0, "description": "Inclusive start offset." },
+          "end": { "type": "integer", "minimum": 1, "description": "Exclusive end offset." },
+          "textHash": { "type": "string", "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 hex digest of the substring." }
+        }
+      },
+      "description": "Pointers into the input message (offset + SHA-256 hash). NEVER raw substring."
+    },
+    "latencyMs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock time the provider spent producing the result, in milliseconds."
+    },
+    "errorCode": {
+      "type": ["string", "null"],
+      "description": "Stable code for partial / failed outputs. null for success."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "V1",
+      "description": "Schema version of this record. Always V1."
+    }
+  }
+}

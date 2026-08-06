@@ -1,60 +1,118 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import MobileNavigation from '../../components/layout/MobileNavigation';
 import PageTransitionWrapper from '../../components/layout/PageTransitionWrapper';
-import JellyfishMascot from '../../components/ui/JellyfishMascot';
+import LanguageSwitcher from '../../components/ui/LanguageSwitcher';
+import { useAuth } from '../../auth/AuthContext';
+import { useLanguage } from '../../i18n';
 
 export default function UserLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { token, logout } = useAuth();
+  const { t } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (!token) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const isOnboarding = location.pathname === '/app/onboarding';
+  const isChatRoute = location.pathname.startsWith('/app/chat');
+  const showNavigation = !isOnboarding;
+
+  const navItems = [
+    { path: '/app', label: t.nav.home, icon: '🏠', end: true },
+    { path: '/app/daily', label: t.nav.checkIn, icon: '💚' },
+    { path: '/app/chat', label: t.nav.aiChat, icon: '💬' },
+    { path: '/app/dashboard', label: t.nav.dashboard, icon: '📊' },
+    { path: '/app/library', label: t.nav.library, icon: '📚' },
+    { path: '/app/settings', label: t.nav.settings, icon: '⚙️' },
+  ];
+
+  const signOut = () => {
+    logout();
+    window.sessionStorage.removeItem('mb:chat:active-session-id');
+    navigate('/auth', { replace: true });
+  };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden w-full relative">
-      {/* Main content */}
-      <div className="pb-20 lg:pb-0 w-full">
-        <PageTransitionWrapper>
+    <div className={`${isChatRoute ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-background overflow-x-hidden w-full relative`}>
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSwitcher variant="pill" />
+      </div>
+
+      <div className={`w-full ${isChatRoute ? 'h-full overflow-hidden' : `${showNavigation ? 'pb-20 lg:pb-8 lg:pl-64' : 'pb-8'}`}`}>
+        <PageTransitionWrapper fullHeight={isChatRoute}>
           <Outlet />
         </PageTransitionWrapper>
       </div>
 
-      {/* Mobile Navigation */}
-      <MobileNavigation 
-        isOpen={mobileNavOpen} 
-        onClose={() => setMobileNavOpen(false)} 
-      />
+      {showNavigation && (
+        <MobileNavigation isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      )}
 
-      {/* Desktop Navigation - only shows on lg+ */}
-      <nav className="hidden lg:flex fixed bottom-8 inset-x-0 z-40 justify-center pointer-events-none px-4">
-        <div className="bg-surface/90 backdrop-blur-lg rounded-full px-4 py-3 shadow-soft-lg border border-gray-100 pointer-events-auto">
-          <div className="flex items-center gap-1">
-            {[
-              { path: '/app', label: 'Home', icon: '🏠' },
-              { path: '/app/check-in', label: 'Check-in', icon: '💚' },
-              { path: '/app/chat', label: 'Chat', icon: '💬' },
-              { path: '/app/dashboard', label: 'Dashboard', icon: '📊' },
-              { path: '/app/library', label: 'Library', icon: '📚' },
-            ].map((item) => (
-              <a
+      {showNavigation && (
+        <aside className="hidden lg:flex fixed top-0 left-0 bottom-0 z-40 w-64 flex-col bg-surface/95 backdrop-blur-lg border-r border-gray-100">
+          <div className="px-6 py-6 border-b border-gray-100">
+            <NavLink to="/app" className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primaryDark flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C8 2 5 5 5 9c0 3 2 5 3 6v3c0 1 1 2 2 2h4c1 0 2-1 2-2v-3c1-1 3-3 3-6 0-4-3-7-7-7z"/>
+                </svg>
+              </div>
+              <span className="text-lg font-semibold text-textMain">{t.common.appName}</span>
+            </NavLink>
+          </div>
+
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {navItems.map((item) => (
+              <NavLink
                 key={item.path}
-                href={item.path}
-                className="px-3 py-2 rounded-full text-sm font-medium text-textMuted hover:text-primary hover:bg-primary/5 transition-all whitespace-nowrap"
+                to={item.path}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-textMuted hover:text-textMain hover:bg-gray-50'
+                  }`
+                }
               >
-                <span className="mr-1">{item.icon}</span>
+                <span className="text-lg">{item.icon}</span>
                 {item.label}
-              </a>
+              </NavLink>
             ))}
-          </div>
-        </div>
-      </nav>
+          </nav>
 
-      {/* Floating jellyfish mascot - desktop only, bottom-left to avoid overlap with center nav */}
-      <div className="hidden lg:block fixed bottom-8 left-6 z-30">
-        <div className="relative flex flex-col items-center">
-          <JellyfishMascot size="md" animated />
-          <div className="mt-1 px-3 py-1 bg-primary/10 rounded-full text-xs text-primary font-medium whitespace-nowrap">
-            Hi there!
+          <div className="px-4 pb-3">
+            <NavLink
+              to="/app/emergency"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold border transition-all ${
+                  isActive
+                    ? 'bg-red-500 text-white border-red-500'
+                    : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
+                }`
+              }
+            >
+              <span className="text-lg">🚨</span>
+              {t.nav.emergency}
+            </NavLink>
           </div>
-        </div>
-      </div>
+
+          <div className="px-4 py-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={signOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-textMuted hover:text-red-600 hover:bg-red-50 transition-all"
+            >
+              <span className="text-lg">🚪</span>
+              {t.common.signOut}
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

@@ -1,27 +1,30 @@
 import { motion } from 'framer-motion';
 import SectionHeader from '../ui/SectionHeader';
+import { useLanguage } from '../../i18n';
 
 export default function ProblemSection() {
+  const { t } = useLanguage();
+
   const painPoints = [
     {
-      quote: "I don't know how I really feel.",
-      description: "Emotions can be complex and hard to name.",
+      quote: t.landing.problemQuote1,
+      description: t.landing.problemDesc1,
     },
     {
-      quote: "I don't know where to start.",
-      description: "The journey to better mental health feels overwhelming.",
+      quote: t.landing.problemQuote2,
+      description: t.landing.problemDesc2,
     },
     {
-      quote: "I'm afraid to share with others.",
-      description: "Fear of judgment prevents seeking support.",
+      quote: t.landing.problemQuote3,
+      description: t.landing.problemDesc3,
     },
     {
-      quote: "I can't track my emotions over time.",
-      description: "Without data, patterns remain invisible.",
+      quote: t.landing.problemQuote4,
+      description: t.landing.problemDesc4,
     },
     {
-      quote: "Professional support feels expensive or far away.",
-      description: "Accessibility remains a significant barrier.",
+      quote: t.landing.problemQuote5,
+      description: t.landing.problemDesc5,
     },
   ];
 
@@ -39,8 +42,8 @@ export default function ProblemSection() {
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
-          title="You are not alone"
-          subtitle="Many young people face similar challenges when it comes to mental health support."
+          title={t.landing.problemTitle}
+          subtitle={t.landing.problemSubtitle}
         />
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -73,8 +76,7 @@ export default function ProblemSection() {
           transition={{ delay: 0.5 }}
         >
           <p className="text-lg text-textMuted max-w-2xl mx-auto">
-            MindBridge AI was designed to address these gaps — providing a safe, accessible, 
-            and supportive space to begin your mental wellness journey.
+            {t.landing.problemOutro}
           </p>
         </motion.div>
       </div>

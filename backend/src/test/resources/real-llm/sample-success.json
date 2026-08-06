@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-fixture-success",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"topic\":\"WORK_STRESS\",\"emotion\":\"ANXIOUS\",\"intent\":\"VENT\",\"signals\":[\"BURNOUT\"],\"modelRiskLevel\":2,\"confidence\":0.78,\"evidenceSpans\":[],\"latencyMs\":0,\"errorCode\":null,\"schemaVersion\":\"V1\"}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 5,
+    "total_tokens": 15
+  }
+}

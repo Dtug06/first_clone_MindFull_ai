@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.mindbridge</groupId>
+    <artifactId>mindbridge-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>MindBridge AI Backend</name>
+    <description>Modular monolith backend for MindBridge AI (MVP)</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
+    </properties>
+
+    <dependencies>
+        <!--
+          Starter dependencies are intentionally minimal for G1-T02.
+          Each starter lists the task that requires it for traceability.
+
+          Added in G1-T02:
+            - web:       embedded Tomcat, needed for `mvn spring-boot:run` to boot.
+            - validation: Bean Validation support for upcoming `@Valid` request DTOs.
+            - actuator:  `/actuator/health` for ops smoke checks.
+
+          Added in G1-T03:
+            - data-jpa:   JPA + Hibernate + HikariCP default pool. Required because
+                          the app must connect to a real PostgreSQL instance.
+                          spring-boot-dependencies BOM pins Hibernate 6.5.x which
+                          supports PostgreSQL 17.
+            - postgresql: JDBC driver for PostgreSQL. BOM-managed (no explicit
+                          version); current 42.7.x line supports PG 17 wire
+                          protocol. `runtime` scope because the driver is loaded
+                          reflectively by JDBC, never imported in source.
+            - h2:         In-memory database for automated tests (profile `test`).
+                          `MODE=PostgreSQL` (set in application-test.yml) keeps
+                          dialect close enough for our migrations later.
+                          `runtime` scope (not `test`) so the driver is on the
+                          main classpath and `mvnw spring-boot:run` with profile
+                          `test` can boot the context end-to-end for smoke
+                          checks. Production profile (`prod`) never references
+                          the H2 URL, so the bundled driver is harmless extra
+                          weight (~1.5 MB).
+
+          Deferred to later tasks (not added in T02/T03 to keep the change minimal):
+            - security:   G1-T06 (auth module + JWT filter)
+            - flyway:     G1-T04 (schema migrations)
+            - springdoc:  G1-T10 (Swagger UI)
+
+          Added in G1-T05:
+            - mapstruct:  type-safe DTO mapper; annotation processor configured in
+                          maven-compiler-plugin so MapStruct and Lombok generate code
+                          without clashing (lombok-mapstruct-binding aligns versions).
+            - mapstruct-processor: annotation processor for MapStruct.
+
+          Added in G1-T06:
+            - security:   spring-boot-starter-security for JWT auth filter chain.
+            - jjwt:       JWT signing/verification (io.jsonwebtoken 0.12.6).
+        -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- G1-T03: real database + driver + test in-memory DB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- G1-T04: Flyway schema migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- G1-T06: Authentication -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- G1-T10: Swagger UI / OpenAPI 3 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
+        <!--
+          G3-T02: JSON Schema runtime validator.
+          Why needed:
+            - Bean Validation (already on classpath via spring-boot-starter-validation)
+              covers shape primitives (@NotNull, @Min, @Max, @Pattern) but cannot
+              enforce JSON Schema invariants like additionalProperties, recursive
+              enum boundaries, or future schema evolution checks.
+            - DoD §4 of G3-T02 requires "Schema validate được output mẫu đúng/sai"
+              with at least 2 valid and 2 invalid samples — that is precisely a
+              JSON Schema validation contract, not a per-field Bean Validation.
+            - Why networknt: most widely used Java JSON Schema validator, supports
+              Draft 07 (which we target), Apache 2.0, no transitive bloat, plays
+              well with Jackson which is already on classpath.
+            - Scope (G3-T07): moved from `test` to `compile`. The runtime
+              validator (`ChatAnalysisSchemaValidator`) now loads the schema at
+              application startup and validates every external LLM response
+              before any ChatAnalysisOutput is constructed. Without compile
+              scope the production runtime would fail to resolve the validator.
+              No new dependency was added — only the scope changed. See
+              G3-T07 Phase 1 plan (docs/tasks/G3/G3-T07-validate-output-retry-va-fallback.md §7).
+        -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- G3-T06: Set a benign fixture API key for the real LLM
+                 unit tests so they can exercise the success / retry /
+                 error-mapping paths without leaking a real key into
+                 the repository. The tests assert nothing about this
+                 value — it exists only so System.getenv returns a
+                 non-blank string. The "missing env var" tests use a
+                 different env var name explicitly. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <MINDBRIDGE_AI_REAL_API_KEY>test-fixture-key-not-real-do-not-use-in-prod</MINDBRIDGE_AI_REAL_API_KEY>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

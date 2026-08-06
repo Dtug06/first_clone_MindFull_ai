@@ -33,6 +33,13 @@
   ::selection {
     @apply bg-primary/20 text-primaryDark;
   }
+
+  /* Responsive chart height used by the latest dashboard prototype. */
+  @media (min-width: 1024px) {
+    [style*="--chart-height-desktop"] {
+      height: var(--chart-height-desktop) !important;
+    }
+  }
 }
 
 @layer components {

@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mindbridge.local/schemas/chat_analysis_v1.schema.json",
+  "title": "ChatAnalysisOutput",
+  "description": "Structured JSON contract for ChatAnalysisProvider.analyze() output. Locked by G3-T02 (2026-08-02). Single source of truth for both backend and frontend — see docs/schemas/chat_analysis_v1.dictionary.md for human-readable documentation. Mirrors the Java enum taxonomy in com.mindbridge.analysis.provider (Topic, Emotion, Intent, Signal) and the ChatAnalysisOutput record. Risk levels and confidence ranges follow docs/04 §3 (Risk Levels) and §7 (LLM Safety Classification). Evidence spans use SHA-256 hex digests (no raw text) per docs/04 §5 'Evidence phải gắn với source' and rule 30 'Do not log unnecessary raw prompts or raw responses containing sensitive data'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "topic",
+    "emotion",
+    "intent",
+    "signals",
+    "modelRiskLevel",
+    "confidence",
+    "evidenceSpans",
+    "latencyMs",
+    "errorCode",
+    "schemaVersion"
+  ],
+  "properties": {
+    "topic": {
+      "type": "string",
+      "enum": [
+        "WORK_STRESS",
+        "RELATIONSHIP",
+        "FAMILY",
+        "HEALTH",
+        "FINANCE",
+        "SLEEP",
+        "OTHER"
+      ],
+      "description": "Dominant subject the user is talking about. See Topic enum (backend) and dictionary.md. NOT a clinical label."
+    },
+    "emotion": {
+      "type": "string",
+      "enum": [
+        "NEUTRAL",
+        "HAPPY",
+        "ANXIOUS",
+        "SAD",
+        "OVERWHELMED",
+        "DISTRESS",
+        "ANGRY"
+      ],
+      "description": "Dominant emotional tone observed in the message. DISTRESS is safety-relevant. Anti-diagnosis guard: this is a tone label, not a clinical state."
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "VENT",
+        "ADVICE",
+        "INFO",
+        "SUPPORT"
+      ],
+      "description": "What the user appears to want from the chat. The chat consumer uses this to pick a tone — NOT a final action decision (Safety Resolver and matching pipeline remain authoritative)."
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "FATIGUE",
+          "SLEEP_DISRUPTION",
+          "ISOLATION",
+          "HOPELESSNESS",
+          "BURNOUT",
+          "SELF_HARM_RISK",
+          "CONFLICT",
+          "GRIEF",
+          "OTHER"
+        ]
+      },
+      "description": "Behaviour-level tags attached to the message. May be empty. SELF_HARM_RISK and HOPELESSNESS are safety-relevant — Safety Resolver consumes them as part of max-wins."
+    },
+    "modelRiskLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Model's own risk signal (1=normal, 2=follow-up, 3=high risk, 4=emergency). NOT the final risk level — Safety Resolver (G3-T10) combines this with keyword/regex pre-filter and the user's current risk state."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Self-reported confidence in the model output, unit interval [0.0, 1.0]. Coarse signal, not a calibrated probability (rule 30 + docs/04 §7)."
+    },
+    "evidenceSpans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start", "end", "textHash"],
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive start offset in characters into the input message (same convention as String.substring)."
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Exclusive end offset in characters into the input message. Must be > start."
+          },
+          "textHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "SHA-256 hex digest (lowercase, 64 hex chars) of the substring [start, end). NEVER the raw substring — see EvidenceSpan JavaDoc and rule 30 'Do not log unnecessary raw prompts or raw responses'."
+          }
+        }
+      },
+      "description": "Pointers into the input message that justify the output. May be empty for short or generic messages. Use textHash to verify the substring offline without storing sensitive text."
+    },
+    "latencyMs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock time the provider spent producing the result, in milliseconds. The provider tracks actual latency; the model MUST emit 0 (see chat_analysis_prompt_v1.md §64)."
+    },
+    "errorCode": {
+      "type": ["string", "null"],
+      "description": "Stable code for partial / failed outputs (e.g. MALFORMED_JSON). null for successful outputs. Never raw error text."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "V1",
+      "description": "Schema version of this record. Always V1 in this revision. See AnalysisSchemaVersion JavaDoc for the versioning policy."
+    }
+  }
+}

@@ -1,12 +1,15 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { Heart, MessageCircle, TrendingUp, Clock } from 'lucide-react';
+import { useLanguage } from '../../i18n';
 import JellyfishMascot from '../ui/JellyfishMascot';
 import FloatingJellyfishBackground from '../ui/FloatingJellyfishBackground';
 import AnimatedGradientBlob from '../ui/AnimatedGradientBlob';
 import CalmCard from '../ui/CalmCard';
-import { Heart, MessageCircle, TrendingUp, Clock } from 'lucide-react';
 
 export default function HeroSection() {
+  const { t } = useLanguage();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero w-full">
       {/* Background elements - wrapped in overflow-hidden container */}
@@ -40,20 +43,19 @@ export default function HeroSection() {
               transition={{ delay: 0.2 }}
             >
               <Heart className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">AI-Powered Mental Wellness</span>
+              <span className="text-sm font-medium text-primary">{t.landing.heroBadge}</span>
             </motion.div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-tight mb-6">
-              <span className="text-textMain">A calmer bridge to your</span>
+              <span className="text-textMain">{t.landing.heroTitle1}</span>
               <br />
               <span className="bg-gradient-to-r from-primary via-primaryDark to-secondary bg-clip-text text-transparent">
-                inner world.
+                {t.landing.heroTitle2}
               </span>
             </h1>
 
             <p className="text-lg text-textMuted max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
-              MindBridge AI helps young people check in with their emotions, talk with a gentle AI companion, 
-              receive self-help guidance, and connect with experts when they need it most.
+              {t.landing.heroDescription}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -61,19 +63,23 @@ export default function HeroSection() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Link to="/app/check-in" className="btn-primary inline-flex items-center gap-2">
+                <Link to="/app/daily" className="btn-primary inline-flex items-center gap-2">
                   <Heart className="w-5 h-5" />
-                  Start your check-in
+                  {t.landing.heroCtaCheckIn}
                 </Link>
               </motion.div>
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <a href="#how-it-works" className="btn-secondary inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
                   <Clock className="w-5 h-5" />
-                  Explore how it works
-                </a>
+                  {t.landing.heroCtaExplore}
+                </button>
               </motion.div>
             </div>
 
@@ -81,15 +87,15 @@ export default function HeroSection() {
             <div className="mt-10 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-textMuted">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span>AI Safety Checked</span>
+                <span>{t.landing.heroTrustSafety}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                <span>Privacy Protected</span>
+                <span>{t.landing.heroTrustPrivacy}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                <span>Expert Supported</span>
+                <span>{t.landing.heroTrustExpert}</span>
               </div>
             </div>
           </motion.div>
@@ -112,9 +118,9 @@ export default function HeroSection() {
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <MessageCircle className="w-5 h-5 text-primary" />
                   </div>
-                  <span className="font-medium text-textMain">AI Companion</span>
+                  <span className="font-medium text-textMain">{t.landing.heroCardAi}</span>
                 </div>
-                <p className="text-sm text-textMuted">Your gentle guide is here to listen and support you.</p>
+                <p className="text-sm text-textMuted">{t.landing.heroCardAiDesc}</p>
               </CalmCard>
             </motion.div>
 
@@ -128,10 +134,10 @@ export default function HeroSection() {
                   <div className="w-8 h-8 rounded-lg bg-softWarning/10 flex items-center justify-center">
                     <span className="text-lg">😊</span>
                   </div>
-                  <span className="text-sm font-medium text-textMain">Today's Mood</span>
+                  <span className="text-sm font-medium text-textMain">{t.landing.heroCardMood}</span>
                 </div>
                 <div className="text-2xl font-semibold text-primary">7.2</div>
-                <p className="text-xs text-textMuted mt-1">Feeling hopeful</p>
+                <p className="text-xs text-textMuted mt-1">{t.landing.heroCardMoodDesc}</p>
               </CalmCard>
             </motion.div>
 
@@ -143,7 +149,7 @@ export default function HeroSection() {
               <CalmCard className="w-52" glass>
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-textMain">7-day trend</span>
+                  <span className="text-sm font-medium text-textMain">{t.landing.heroCardTrend}</span>
                 </div>
                 <div className="h-12 flex items-end gap-1">
                   {[65, 72, 68, 75, 70, 78, 74].map((h, i) => (

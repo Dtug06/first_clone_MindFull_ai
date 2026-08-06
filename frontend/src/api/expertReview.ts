@@ -1,0 +1,133 @@
+/**
+ * Expert Review API — G3-T13.
+ * Wraps the /api/v1/expert-reviews endpoints.
+ * Only accessible to EXPERT and ADMIN roles.
+ */
+
+import { ApiClient } from './client';
+import type { RiskLevel } from '../types';
+
+export type SafetyEventStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
+
+export type ExpertReviewDecision =
+  | 'CONFIRM_RISK'
+  | 'DOWNGRADE_RISK'
+  | 'ESCALATE'
+  | 'NO_ACTION'
+  | 'CONTINUE_MONITORING'
+  | 'REQUEST_FOLLOWUP'
+  | 'DISMISS';
+
+export interface SubmitReviewRequest {
+  decision: ExpertReviewDecision;
+  note?: string;
+}
+
+export interface ExpertReviewResponse {
+  id: string;
+  safetyEventId: string;
+  reviewerId: string;
+  reviewerDisplayName: string;
+  decision: ExpertReviewDecision;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface SafetyEventSource {
+  id: string;
+  sourceType: 'CHAT_ANALYSIS' | 'DAILY_ANSWER' | 'EXERCISE_SUBMISSION' | 'PROGRAM_ASSESSMENT';
+  sourceId: string | null;
+  createdAt: string;
+}
+
+export interface SafetyAction {
+  id: string;
+  actionType: 'SHOW_TEMPLATE' | 'BLOCK_MATCHING' | 'FLAG_REVIEW' | 'PAUSE_PROGRAM';
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+  errorMessage: string | null;
+  executedAt: string | null;
+  createdAt: string;
+}
+
+export interface SafetyEventDetail {
+  id: string;
+  userId: string;
+  riskLevel: RiskLevel;
+  status: SafetyEventStatus;
+  summary: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  sources: SafetyEventSource[];
+  actions: SafetyAction[];
+  reviews: ExpertReviewResponse[];
+}
+
+export interface SafetyEventSummary {
+  id: string;
+  userId: string;
+  riskLevel: RiskLevel;
+  status: SafetyEventStatus;
+  summary: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  reviewCount: number;
+}
+
+export interface PagedSafetyEvents {
+  content: SafetyEventSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
+export class ExpertReviewApi {
+  constructor(private readonly client: ApiClient) {}
+
+  /**
+   * GET /api/v1/expert-reviews/events
+   * Lists safety events for the expert-review queue.
+   */
+  listEvents(params?: {
+    status?: SafetyEventStatus;
+    riskLevel?: RiskLevel;
+    page?: number;
+    size?: number;
+  }): Promise<PagedSafetyEvents> {
+    return this.client.request<PagedSafetyEvents>('/expert-reviews/events', {
+      method: 'GET',
+      query: {
+        ...(params?.status !== undefined ? { status: params.status } : {}),
+        ...(params?.riskLevel !== undefined ? { riskLevel: params.riskLevel } : {}),
+        ...(params?.page !== undefined ? { page: params.page } : {}),
+        ...(params?.size !== undefined ? { size: params.size } : {}),
+      },
+    });
+  }
+
+  /**
+   * GET /api/v1/expert-reviews/events/{eventId}
+   * Returns full event detail including sources, actions, and reviews.
+   * Records an EXPERT_REVIEW_OPENED audit event on the backend.
+   */
+  getEventDetail(eventId: string): Promise<SafetyEventDetail> {
+    return this.client.request<SafetyEventDetail>(
+      `/expert-reviews/events/${eventId}`,
+      { method: 'GET' },
+    );
+  }
+
+  /**
+   * POST /api/v1/expert-reviews/events/{eventId}/review
+   * Submits a review decision for the given event.
+   * Returns HTTP 409 if the reviewer has already submitted a review.
+   */
+  submitReview(eventId: string, payload: SubmitReviewRequest): Promise<ExpertReviewResponse> {
+    return this.client.request<ExpertReviewResponse>(
+      `/expert-reviews/events/${eventId}/review`,
+      { method: 'POST', body: payload },
+    );
+  }
+}

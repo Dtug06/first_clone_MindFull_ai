@@ -1,23 +1,25 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Heart, MessageCircle, BarChart2, BookOpen, AlertCircle, X } from 'lucide-react';
+import { useLanguage } from '../../i18n';
 
 interface MobileNavigationProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const navItems = [
-  { path: '/app', icon: Home, label: 'Home', exact: true },
-  { path: '/app/check-in', icon: Heart, label: 'Check-in' },
-  { path: '/app/chat', icon: MessageCircle, label: 'AI Chat' },
-  { path: '/app/dashboard', icon: BarChart2, label: 'Dashboard' },
-  { path: '/app/library', icon: BookOpen, label: 'Library' },
-  { path: '/app/emergency', icon: AlertCircle, label: 'Emergency' },
-];
-
 export default function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
   const location = useLocation();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { path: '/app', icon: Home, label: t.nav.home, exact: true },
+    { path: '/app/daily', icon: Heart, label: t.nav.checkIn },
+    { path: '/app/chat', icon: MessageCircle, label: t.nav.aiChat },
+    { path: '/app/dashboard', icon: BarChart2, label: t.nav.dashboard },
+    { path: '/app/library', icon: BookOpen, label: t.nav.library },
+    { path: '/app/emergency', icon: AlertCircle, label: t.nav.emergency },
+  ];
 
   return (
     <>

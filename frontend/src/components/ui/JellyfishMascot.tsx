@@ -29,7 +29,7 @@ export default function JellyfishMascot({
   ], [dimensions]);
 
   const floatAnimation = animated ? {
-    y: [0, -15, -8, -20, 0],
+    y: [0, -12, -6, -16, 0],
     transition: {
       duration: 6,
       repeat: Infinity,
@@ -38,8 +38,8 @@ export default function JellyfishMascot({
   } : {};
 
   const glowAnimation = animated ? {
-    opacity: [0.3, 0.6, 0.4, 0.7, 0.3],
-    scale: [1, 1.05, 1.02, 1.08, 1],
+    opacity: [0.3, 0.65, 0.4, 0.7, 0.3],
+    scale: [1, 1.06, 1.02, 1.08, 1],
     transition: {
       duration: 4,
       repeat: Infinity,
@@ -48,9 +48,13 @@ export default function JellyfishMascot({
   } : {};
 
   return (
-    <motion.div 
+    <motion.div
       className={`relative ${className}`}
-      style={{ width: dimensions.wrapper, height: dimensions.wrapper + dimensions.tentacle }}
+      style={{
+        width: dimensions.wrapper,
+        height: dimensions.wrapper,
+        overflow: 'hidden',
+      }}
       animate={floatAnimation}
     >
       {/* Glow effect */}
@@ -65,8 +69,9 @@ export default function JellyfishMascot({
 
       {/* Jellyfish body */}
       <motion.svg
-        viewBox={`0 0 ${dimensions.wrapper} ${dimensions.wrapper + dimensions.tentacle}`}
+        viewBox={`0 0 ${dimensions.wrapper} ${dimensions.wrapper}`}
         className="w-full h-full"
+        style={{ overflow: 'visible' }}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -91,99 +96,102 @@ export default function JellyfishMascot({
           </linearGradient>
         </defs>
 
-        {/* Head/Bell of jellyfish */}
-        <motion.ellipse
-          cx={dimensions.wrapper / 2}
-          cy={dimensions.head / 2}
-          rx={dimensions.head / 2}
-          ry={dimensions.head / 2.2}
-          fill={`url(#jellyGrad-${size})`}
-          filter={`url(#glow-${size})`}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        />
-
-        {/* Inner glow ring */}
-        <motion.ellipse
-          cx={dimensions.wrapper / 2}
-          cy={dimensions.head / 2.3}
-          rx={dimensions.head / 3.5}
-          ry={dimensions.head / 4}
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.4)"
-          strokeWidth="1"
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 0.4, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        />
-
-        {/* Small highlight */}
-        <motion.ellipse
-          cx={dimensions.wrapper / 2 - dimensions.head / 6}
-          cy={dimensions.head / 3}
-          rx={dimensions.head / 10}
-          ry={dimensions.head / 15}
-          fill="rgba(255, 255, 255, 0.5)"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          transition={{ duration: 0.4, delay: 0.6 }}
-        />
-
-        {/* Tentacles */}
-        {tentaclePaths.map((path, index) => (
-          <motion.path
-            key={index}
-            d={path.d}
-            fill="none"
-            stroke={`url(#tentacleGrad-${size})`}
-            strokeWidth={dimensions.wrapper / 30}
-            strokeLinecap="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ 
-              pathLength: 1, 
-              opacity: 0.6,
-              d: animated ? [
-                path.d,
-                path.d.replace(/Q\d+/g, (match) => `Q${parseInt(match.slice(1)) + (index % 2 === 0 ? 10 : -10)}`),
-                path.d,
-              ] : path.d
-            }}
-            transition={{
-              pathLength: { duration: 0.8, delay: 0.3 + index * 0.1 },
-              opacity: { duration: 0.4, delay: 0.4 + index * 0.1 },
-              default: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: path.delay }
-            }}
+        {/* Shift origin: translate so jellyfish sits in bottom half of square viewBox */}
+        <g transform={`translate(0, ${-dimensions.tentacle * 0.15})`}>
+          {/* Head/Bell of jellyfish */}
+          <motion.ellipse
+            cx={dimensions.wrapper / 2}
+            cy={dimensions.head / 2}
+            rx={dimensions.head / 2}
+            ry={dimensions.head / 2.2}
+            fill={`url(#jellyGrad-${size})`}
+            filter={`url(#glow-${size})`}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
           />
-        ))}
 
-        {/* Subtle bubbles */}
-        {size !== 'sm' && (
-          <>
-            <motion.circle
-              cx={dimensions.wrapper / 3}
-              cy={dimensions.head / 2}
-              r={dimensions.wrapper / 40}
-              fill="rgba(255, 255, 255, 0.3)"
+          {/* Inner glow ring */}
+          <motion.ellipse
+            cx={dimensions.wrapper / 2}
+            cy={dimensions.head / 2.3}
+            rx={dimensions.head / 3.5}
+            ry={dimensions.head / 4}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.4)"
+            strokeWidth="1"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 0.4, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          />
+
+          {/* Small highlight */}
+          <motion.ellipse
+            cx={dimensions.wrapper / 2 - dimensions.head / 6}
+            cy={dimensions.head / 3}
+            rx={dimensions.head / 10}
+            ry={dimensions.head / 15}
+            fill="rgba(255, 255, 255, 0.5)"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+          />
+
+          {/* Tentacles */}
+          {tentaclePaths.map((path, index) => (
+            <motion.path
+              key={index}
+              d={path.d}
+              fill="none"
+              stroke={`url(#tentacleGrad-${size})`}
+              strokeWidth={dimensions.wrapper / 30}
+              strokeLinecap="round"
+              initial={{ pathLength: 0, opacity: 0 }}
               animate={{
-                y: [-5, -15, -5],
-                opacity: [0.3, 0.6, 0.3],
+                pathLength: 1,
+                opacity: 0.6,
+                d: animated ? [
+                  path.d,
+                  path.d.replace(/Q\d+/g, (match) => `Q${parseInt(match.slice(1)) + (index % 2 === 0 ? 10 : -10)}`),
+                  path.d,
+                ] : path.d
               }}
-              transition={{ duration: 3, repeat: Infinity, delay: 0 }}
-            />
-            <motion.circle
-              cx={dimensions.wrapper * 2 / 3}
-              cy={dimensions.head / 1.5}
-              r={dimensions.wrapper / 50}
-              fill="rgba(255, 255, 255, 0.25)"
-              animate={{
-                y: [-8, -18, -8],
-                opacity: [0.25, 0.5, 0.25],
+              transition={{
+                pathLength: { duration: 0.8, delay: 0.3 + index * 0.1 },
+                opacity: { duration: 0.4, delay: 0.4 + index * 0.1 },
+                default: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: path.delay }
               }}
-              transition={{ duration: 4, repeat: Infinity, delay: 1 }}
             />
-          </>
-        )}
+          ))}
+
+          {/* Subtle bubbles */}
+          {size !== 'sm' && (
+            <>
+              <motion.circle
+                cx={dimensions.wrapper / 3}
+                cy={dimensions.head / 2}
+                r={dimensions.wrapper / 40}
+                fill="rgba(255, 255, 255, 0.3)"
+                animate={{
+                  y: [-5, -15, -5],
+                  opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{ duration: 3, repeat: Infinity, delay: 0 }}
+              />
+              <motion.circle
+                cx={dimensions.wrapper * 2 / 3}
+                cy={dimensions.head / 1.5}
+                r={dimensions.wrapper / 50}
+                fill="rgba(255, 255, 255, 0.25)"
+                animate={{
+                  y: [-8, -18, -8],
+                  opacity: [0.25, 0.5, 0.25],
+                }}
+                transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+              />
+            </>
+          )}
+        </g>
       </motion.svg>
     </motion.div>
   );
