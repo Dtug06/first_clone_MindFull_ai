@@ -21,4 +21,7 @@ public interface DailyQuestionAssignmentRepository extends JpaRepository<DailyQu
      * Returns all assignments for a user (any date) — for admin/debug use only.
      */
     List<DailyQuestionAssignment> findByUserIdOrderByAssignedForDateDesc(UUID userId);
+
+    /** Number of Daily questions actually assigned to the user for that local date. */
+    long countByUserIdAndAssignedForDate(UUID userId, LocalDate assignedForDate);
 }

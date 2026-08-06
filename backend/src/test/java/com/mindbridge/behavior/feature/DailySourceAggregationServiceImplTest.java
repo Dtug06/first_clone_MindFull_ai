@@ -20,6 +20,7 @@ import com.mindbridge.behavior.feature.impl.DailySourceAggregationServiceImpl;
 import com.mindbridge.behavior.repository.BehavioralEventRepository;
 import com.mindbridge.dailyquestion.domain.DailyQuestionAnswer;
 import com.mindbridge.dailyquestion.repository.DailyQuestionAnswerRepository;
+import com.mindbridge.dailyquestion.repository.DailyQuestionAssignmentRepository;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -57,6 +58,7 @@ import org.mockito.ArgumentCaptor;
 class DailySourceAggregationServiceImplTest {
 
     private DailyQuestionAnswerRepository answerRepo;
+    private DailyQuestionAssignmentRepository assignmentRepo;
     private ChatAnalysisResultRepository chatRepo;
     private BehavioralEventRepository eventRepo;
     private DataSource dataSource;
@@ -65,6 +67,7 @@ class DailySourceAggregationServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         answerRepo = mock(DailyQuestionAnswerRepository.class);
+        assignmentRepo = mock(DailyQuestionAssignmentRepository.class);
         chatRepo = mock(ChatAnalysisResultRepository.class);
         eventRepo = mock(BehavioralEventRepository.class);
         dataSource = mock(DataSource.class);
@@ -72,7 +75,8 @@ class DailySourceAggregationServiceImplTest {
         when(chatRepo.findByUserIdAndCreatedAtBetweenOrderByCreatedAtDesc(any(), any(), any())).thenReturn(Collections.emptyList());
         BehavioralEventCountsRow empty = emptyRow();
         when(eventRepo.aggregateByUserAndDay(any(), any(), any())).thenReturn(empty);
-        service = new DailySourceAggregationServiceImpl(answerRepo, chatRepo, eventRepo, dataSource);
+        service = new DailySourceAggregationServiceImpl(
+                answerRepo, assignmentRepo, chatRepo, eventRepo, dataSource);
     }
 
     /** Test helper: returns a BehavioralEventCountsRow with all zeros. */
@@ -262,7 +266,8 @@ class DailySourceAggregationServiceImplTest {
         when(rs.next()).thenReturn(true);
         when(rs.getInt(1)).thenReturn(1);
 
-        service = new DailySourceAggregationServiceImpl(answerRepo, chatRepo, eventRepo, dataSource);
+        service = new DailySourceAggregationServiceImpl(
+                answerRepo, assignmentRepo, chatRepo, eventRepo, dataSource);
         runPostConstruct(service);
 
         DailySourceAggregation out = service.aggregateForDay(UUID.randomUUID(), "UTC", LocalDate.of(2026, 8, 4));
@@ -281,7 +286,8 @@ class DailySourceAggregationServiceImplTest {
         when(rs.next()).thenReturn(true);
         when(rs.getInt(1)).thenReturn(0);
 
-        service = new DailySourceAggregationServiceImpl(answerRepo, chatRepo, eventRepo, dataSource);
+        service = new DailySourceAggregationServiceImpl(
+                answerRepo, assignmentRepo, chatRepo, eventRepo, dataSource);
         runPostConstruct(service);
 
         DailySourceAggregation out = service.aggregateForDay(UUID.randomUUID(), "UTC", LocalDate.of(2026, 8, 4));
@@ -293,7 +299,8 @@ class DailySourceAggregationServiceImplTest {
     void cbtProbe_throws_defaultsToNotShipped() throws Exception {
         when(dataSource.getConnection()).thenThrow(new java.sql.SQLException("connection refused"));
 
-        service = new DailySourceAggregationServiceImpl(answerRepo, chatRepo, eventRepo, dataSource);
+        service = new DailySourceAggregationServiceImpl(
+                answerRepo, assignmentRepo, chatRepo, eventRepo, dataSource);
         runPostConstruct(service);
 
         DailySourceAggregation out = service.aggregateForDay(UUID.randomUUID(), "UTC", LocalDate.of(2026, 8, 4));
@@ -320,6 +327,19 @@ class DailySourceAggregationServiceImplTest {
         verify(eventRepo).aggregateByUserAndDay(eq(userId), fromInstCap.capture(), toInstCap.capture());
         assertThat(fromInstCap.getValue()).isEqualTo(out.windowStartUtc().toInstant());
         assertThat(toInstCap.getValue()).isEqualTo(out.windowEndUtc().toInstant());
+    }
+
+    @Test
+    @DisplayName("Daily assigned count comes from assignments for the same user and local date")
+    void assignedCount_comesFromDailyAssignments() {
+        UUID userId = UUID.randomUUID();
+        LocalDate day = LocalDate.of(2026, 8, 4);
+        when(assignmentRepo.countByUserIdAndAssignedForDate(userId, day)).thenReturn(4L);
+
+        DailySourceAggregation out = service.aggregateForDay(userId, "UTC", day);
+
+        assertThat(out.behavioralCounts().checkinAssignedCount()).isEqualTo(4L);
+        verify(assignmentRepo).countByUserIdAndAssignedForDate(userId, day);
     }
 
     @Test

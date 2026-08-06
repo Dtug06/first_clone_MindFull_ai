@@ -2,6 +2,7 @@ package com.mindbridge.behavior.feature.profile.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mindbridge.auth.repository.UserRepository;
 import com.mindbridge.behavior.feature.engagement.EngagementAndTopicsService;
 import com.mindbridge.behavior.feature.engagement.config.EngagementConfig;
 import com.mindbridge.behavior.feature.engagement.dto.EngagementAndTopicsResult;
@@ -22,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.DateTimeException;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ public class UserBehaviorProfileAggregationServiceImpl
 
     private static final Logger log =
             LoggerFactory.getLogger(UserBehaviorProfileAggregationServiceImpl.class);
-    private static final String DEFAULT_TZ = "Asia/Ho_Chi_Minh";
+    private static final ZoneId FALLBACK_ZONE = ZoneId.of("UTC");
 
     private final WindowAggregationService windowAggregationService;
     private final TrendCalculator trendCalculator;
@@ -42,6 +44,7 @@ public class UserBehaviorProfileAggregationServiceImpl
     private final ObjectMapper objectMapper;
     private final TrendConfigProperties trendConfigProperties;
     private final DataQualityConfigProperties dataQualityConfigProperties;
+    private final UserRepository userRepository;
 
     public UserBehaviorProfileAggregationServiceImpl(
             WindowAggregationService windowAggregationService,
@@ -50,7 +53,8 @@ public class UserBehaviorProfileAggregationServiceImpl
             RiskStateHistoryRepository riskStateHistoryRepository,
             ObjectMapper objectMapper,
             TrendConfigProperties trendConfigProperties,
-            DataQualityConfigProperties dataQualityConfigProperties) {
+            DataQualityConfigProperties dataQualityConfigProperties,
+            UserRepository userRepository) {
         this.windowAggregationService = windowAggregationService;
         this.trendCalculator = trendCalculator;
         this.engagementAndTopicsService = engagementAndTopicsService;
@@ -58,6 +62,7 @@ public class UserBehaviorProfileAggregationServiceImpl
         this.objectMapper = objectMapper;
         this.trendConfigProperties = trendConfigProperties;
         this.dataQualityConfigProperties = dataQualityConfigProperties;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -80,7 +85,7 @@ public class UserBehaviorProfileAggregationServiceImpl
      */
     public ProfileSnapshot aggregateForUser(UUID userId, LocalDate targetDate,
                                           DataQualityConfig dataQualityConfig) {
-        ZoneId zoneId = ZoneId.of(DEFAULT_TZ);
+        ZoneId zoneId = resolveUserZone(userId);
 
         WindowAggregationResult window =
                 windowAggregationService.aggregateForUser(userId, targetDate);
@@ -150,6 +155,21 @@ public class UserBehaviorProfileAggregationServiceImpl
             log.warn("G4-T09 aggregateForUser failed to serialize TrendSummary for userId={}",
                     trend.userId(), e);
             return null;
+        }
+    }
+
+    private ZoneId resolveUserZone(UUID userId) {
+        String value = userRepository.findById(userId)
+                .map(user -> user.getTimezone())
+                .orElse(null);
+        if (value == null || value.isBlank()) {
+            return FALLBACK_ZONE;
+        }
+        try {
+            return ZoneId.of(value);
+        } catch (DateTimeException ex) {
+            log.warn("Invalid user timezone; falling back to UTC for userId={}", userId);
+            return FALLBACK_ZONE;
         }
     }
 

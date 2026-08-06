@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import com.mindbridge.behavior.feature.engagement.EngagementAndTopicsService;
 import com.mindbridge.behavior.feature.engagement.config.EngagementConfig;
@@ -23,6 +24,8 @@ import com.mindbridge.behavior.feature.trend.dto.TrendReason;
 import com.mindbridge.behavior.feature.trend.dto.TrendSummary;
 import com.mindbridge.behavior.feature.window.WindowAggregationService;
 import com.mindbridge.behavior.feature.window.dto.WindowAggregationResult;
+import com.mindbridge.auth.domain.entity.User;
+import com.mindbridge.auth.repository.UserRepository;
 import com.mindbridge.safety.resolver.RiskStateHistory;
 import com.mindbridge.safety.resolver.RiskStateHistoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +51,7 @@ class UserBehaviorProfileAggregationServiceImplTest {
     @Mock TrendCalculator trendCalculator;
     @Mock EngagementAndTopicsService engagementService;
     @Mock RiskStateHistoryRepository riskStateHistoryRepository;
+    @Mock UserRepository userRepository;
 
     ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -70,6 +74,9 @@ class UserBehaviorProfileAggregationServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        User user = User.register("profile@example.test", "hash", "Profile User");
+        user.setTimezone("Asia/Ho_Chi_Minh");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         service = new UserBehaviorProfileAggregationServiceImpl(
                 windowAggregationService,
                 trendCalculator,
@@ -80,7 +87,8 @@ class UserBehaviorProfileAggregationServiceImplTest {
                 new DataQualityConfigProperties(
                         new BigDecimal("0.20"),
                         new BigDecimal("0.50"),
-                        new BigDecimal("0.30")));
+                        new BigDecimal("0.30")),
+                userRepository);
     }
 
     @Test
@@ -294,6 +302,31 @@ class UserBehaviorProfileAggregationServiceImplTest {
         ProfileSnapshot snapshot = service.aggregateForUser(userId, targetDate);
 
         assertThat(snapshot.dataQualityStatus()).isEqualTo(DataQualityStatus.SUFFICIENT);
+    }
+
+    @Test
+    @DisplayName("profile trend and engagement use the authenticated user's timezone")
+    void usesUserTimezone() {
+        User user = User.register("tz@example.test", "hash", "Timezone User");
+        user.setTimezone("America/New_York");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(windowAggregationService.aggregateForUser(userId, targetDate))
+                .thenReturn(mockWindowEmpty());
+        when(trendCalculator.calculateTrendForUser(
+                eq(userId), eq(targetDate), eq(ZoneId.of("America/New_York")), any(TrendConfig.class)))
+                .thenReturn(mockTrend());
+        when(engagementService.summarizeForUser(
+                eq(userId), eq(targetDate), eq(ZoneId.of("America/New_York")), any(EngagementConfig.class)))
+                .thenReturn(mockEngagement(0, 0, List.of()));
+        when(riskStateHistoryRepository.findFirstByUserIdOrderByOccurredAtDescIdDesc(userId))
+                .thenReturn(Optional.empty());
+
+        service.aggregateForUser(userId, targetDate, insufficientConfig);
+
+        verify(trendCalculator).calculateTrendForUser(
+                eq(userId), eq(targetDate), eq(ZoneId.of("America/New_York")), any(TrendConfig.class));
+        verify(engagementService).summarizeForUser(
+                eq(userId), eq(targetDate), eq(ZoneId.of("America/New_York")), any(EngagementConfig.class));
     }
 
     private WindowAggregationResult mockWindow(BigDecimal score7d, BigDecimal score30d,

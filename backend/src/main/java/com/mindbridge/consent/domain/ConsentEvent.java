@@ -26,7 +26,8 @@ import org.hibernate.type.SqlTypes;
  * - The DB-level CHECK constraints reject invalid {@link ConsentType} / {@link ConsentAction} values.
  *
  * Each grant or revocation inserts a new row. The current state is derived by
- * taking the latest event per (userId, consentType) by occurredAt.
+ * taking the latest event per (userId, consentType) by occurredAt and the
+ * database-generated eventOrder tie-breaker.
  */
 @Entity
 @Table(name = "consent_events")
@@ -56,6 +57,9 @@ public class ConsentEvent {
 
     @Column(name = "occurred_at", nullable = false, updatable = false)
     private Instant occurredAt;
+
+    @Column(name = "event_order", nullable = false, insertable = false, updatable = false)
+    private Long eventOrder;
 
     protected ConsentEvent() {
     }
@@ -112,5 +116,9 @@ public class ConsentEvent {
 
     public Instant getOccurredAt() {
         return occurredAt;
+    }
+
+    public Long getEventOrder() {
+        return eventOrder;
     }
 }

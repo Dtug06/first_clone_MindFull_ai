@@ -37,6 +37,8 @@ import org.springframework.test.web.servlet.MvcResult;
         "classpath:schema-consent.sql",
         "classpath:schema-chat-sessions.sql",
         "classpath:schema-conversation-messages.sql",
+        "classpath:schema-ai-analysis-runs.sql",
+        "classpath:schema-chat-analysis-results.sql",
         "classpath:schema-behavioral-events.sql",
         "classpath:schema-idempotency-keys.sql"
 })

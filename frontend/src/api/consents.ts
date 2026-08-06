@@ -10,12 +10,18 @@ export type ConsentType = 'CHAT_ANALYSIS' | 'PERSONALIZATION' | 'EXPERT_SHARING'
 export type ConsentAction = 'GRANTED' | 'REVOKED';
 
 export interface CurrentConsentResponse {
-  consents: Array<{
-    consentType: ConsentType;
-    state: ConsentAction;
-    policyVersion: string;
-    updatedAt: string;
-  }>;
+  consentType: ConsentType;
+  granted: boolean;
+  policyVersion: string | null;
+  updatedAt: string | null;
+}
+
+export interface ConsentEventResponse {
+  id: string;
+  consentType: ConsentType;
+  action: ConsentAction;
+  policyVersion: string;
+  occurredAt: string;
 }
 
 export interface ConsentRecordRequest {
@@ -27,11 +33,11 @@ export interface ConsentRecordRequest {
 export class ConsentsApi {
   constructor(private readonly client: ApiClient) {}
 
-  current(): Promise<CurrentConsentResponse> {
-    return this.client.request<CurrentConsentResponse>('/consents/current', { method: 'GET' });
+  current(): Promise<CurrentConsentResponse[]> {
+    return this.client.request<CurrentConsentResponse[]>('/consents/current', { method: 'GET' });
   }
 
-  record(payload: ConsentRecordRequest): Promise<unknown> {
-    return this.client.request('/consents', { method: 'POST', body: payload });
+  record(payload: ConsentRecordRequest): Promise<ConsentEventResponse> {
+    return this.client.request<ConsentEventResponse>('/consents', { method: 'POST', body: payload });
   }
 }
