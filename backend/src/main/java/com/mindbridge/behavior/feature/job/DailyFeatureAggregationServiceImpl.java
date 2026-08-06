@@ -3,6 +3,7 @@ package com.mindbridge.behavior.feature.job;
 import com.mindbridge.auth.domain.entity.User;
 import com.mindbridge.auth.repository.UserRepository;
 import com.mindbridge.behavior.feature.FeatureCalculationService;
+import com.mindbridge.behavior.feature.DailySourceAggregationService;
 import com.mindbridge.behavior.feature.config.FeatureConfig;
 import com.mindbridge.behavior.feature.dto.DailyFeatureResult;
 import com.mindbridge.behavior.feature.dto.DailySourceAggregation;
@@ -17,9 +18,6 @@ import com.mindbridge.behavior.feature.job.mapper.UserDailyFeatureMapper;
 import com.mindbridge.behavior.feature.job.persistence.UserDailyFeatureUpsertService;
 import com.mindbridge.behavior.feature.job.recorder.JobRunRecorder;
 import com.mindbridge.behavior.feature.job.repository.JobRunRepository;
-import com.mindbridge.behavior.repository.BehavioralEventRepository;
-import com.mindbridge.analysis.result.repository.ChatAnalysisResultRepository;
-import com.mindbridge.dailyquestion.repository.DailyQuestionAnswerRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -37,9 +35,7 @@ public class DailyFeatureAggregationServiceImpl implements DailyFeatureAggregati
     private static final String DEFAULT_TZ = "Asia/Ho_Chi_Minh";
     private static final int BATCH_SIZE = 100;
 
-    private final BehavioralEventRepository behavioralEventRepository;
-    private final DailyQuestionAnswerRepository dailyQuestionAnswerRepository;
-    private final ChatAnalysisResultRepository chatAnalysisResultRepository;
+    private final DailySourceAggregationService sourceAggregationService;
     private final UserRepository userRepository;
     private final DailyFeatureAggregationProperties properties;
     private final FeatureCalculationService featureCalculationService;
@@ -49,9 +45,7 @@ public class DailyFeatureAggregationServiceImpl implements DailyFeatureAggregati
     private final JobRunRecorder recorder;
 
     public DailyFeatureAggregationServiceImpl(
-            BehavioralEventRepository behavioralEventRepository,
-            DailyQuestionAnswerRepository dailyQuestionAnswerRepository,
-            ChatAnalysisResultRepository chatAnalysisResultRepository,
+            DailySourceAggregationService sourceAggregationService,
             UserRepository userRepository,
             DailyFeatureAggregationProperties properties,
             FeatureCalculationService featureCalculationService,
@@ -59,9 +53,7 @@ public class DailyFeatureAggregationServiceImpl implements DailyFeatureAggregati
             UserDailyFeatureUpsertService upsertService,
             JobRunRepository jobRunRepository,
             JobRunRecorder recorder) {
-        this.behavioralEventRepository = behavioralEventRepository;
-        this.dailyQuestionAnswerRepository = dailyQuestionAnswerRepository;
-        this.chatAnalysisResultRepository = chatAnalysisResultRepository;
+        this.sourceAggregationService = sourceAggregationService;
         this.userRepository = userRepository;
         this.properties = properties;
         this.featureCalculationService = featureCalculationService;
@@ -74,16 +66,20 @@ public class DailyFeatureAggregationServiceImpl implements DailyFeatureAggregati
     @Override
     public UserAggregationResult aggregateOneUser(UUID userId, LocalDate localDate) {
         try {
-            DailySourceAggregation source = aggregateSource(userId, localDate, DEFAULT_TZ);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+            String timezone = resolveTimezone(user.getTimezone());
+            DailySourceAggregation source = sourceAggregationService.aggregateForDay(
+                    userId, timezone, localDate);
             if (source == null) {
                 return UserAggregationResult.failure(userId, localDate, "No source data for user on date");
             }
             FeatureConfig config = FeatureConfig.defaults();
             DailyFeatureResult result = featureCalculationService.calculateForDay(source, config);
             UUID entityId = UUID.randomUUID();
-            OffsetDateTime createdAt = Instant.now().atZone(ZoneId.of(DEFAULT_TZ)).toOffsetDateTime();
+            OffsetDateTime createdAt = Instant.now().atZone(ZoneId.of(timezone)).toOffsetDateTime();
             UserDailyFeature entity = new UserDailyFeature();
-            featureMapper.toEntity(result, entityId, localDate, DEFAULT_TZ, createdAt, entity);
+            featureMapper.toEntity(result, entityId, localDate, timezone, createdAt, entity);
             UUID rowId = upsertService.upsert(entity);
             return UserAggregationResult.success(userId, localDate, rowId);
         } catch (Exception e) {
@@ -180,17 +176,11 @@ public class DailyFeatureAggregationServiceImpl implements DailyFeatureAggregati
                 fresh.getUsersAttempted(), fresh.getUsersSucceeded(), fresh.getUsersFailed(), durationMs);
     }
 
-    private DailySourceAggregation aggregateSource(UUID userId, LocalDate localDate, String timezone) {
-        var zoneId = java.time.ZoneId.of(timezone);
-        OffsetDateTime windowStart = localDate.atStartOfDay(zoneId).toOffsetDateTime();
-        OffsetDateTime windowEnd = localDate.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime();
-        return new DailySourceAggregation(
-                userId, timezone, localDate,
-                windowStart, windowEnd,
-                java.util.List.of(),
-                java.util.List.of(),
-                com.mindbridge.behavior.feature.dto.DailySourceAggregation.BehavioralEventCounts.empty(),
-                com.mindbridge.behavior.feature.dto.CbtAvailability.NOT_SHIPPED,
-                com.mindbridge.behavior.feature.dto.DailySourceAggregation.CbtAggregation.empty());
+    private String resolveTimezone(String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            return DEFAULT_TZ;
+        }
+        ZoneId.of(timezone);
+        return timezone;
     }
 }

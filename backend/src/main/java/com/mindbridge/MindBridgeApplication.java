@@ -3,6 +3,7 @@ package com.mindbridge;
 import com.mindbridge.behavior.feature.job.DailyFeatureAggregationProperties;
 import com.mindbridge.behavior.feature.job.cli.DailyFeatureAggregationCliProperties;
 import com.mindbridge.behavior.feature.profile.config.TrendConfigProperties;
+import com.mindbridge.behavior.feature.profile.config.DataQualityConfigProperties;
 import com.mindbridge.behavior.feature.profile.job.UserBehaviorProfileAggregationProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -35,7 +36,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         DailyFeatureAggregationProperties.class,
         DailyFeatureAggregationCliProperties.class,
         UserBehaviorProfileAggregationProperties.class,
-        TrendConfigProperties.class
+        TrendConfigProperties.class,
+        DataQualityConfigProperties.class
 })
 public class MindBridgeApplication {
 

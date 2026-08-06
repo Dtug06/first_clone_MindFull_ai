@@ -1,4 +1,4 @@
-import { Link, Routes, Route } from 'react-router-dom';
+import { Link, Navigate, Routes, Route } from 'react-router-dom';
 import { Suspense } from 'react';
 import LandingNav from './components/landing/LandingNav';
 import HeroSection from './components/landing/HeroSection';
@@ -13,11 +13,14 @@ import FinalCTASection from './components/landing/FinalCTASection';
 // User pages
 import UserLayout from './pages/user/UserLayout';
 import UserHome from './pages/user/UserHome';
-import MoodCheckIn from './pages/user/MoodCheckIn';
 import AIChat from './pages/user/AIChat';
 import Dashboard from './pages/user/Dashboard';
 import SelfHelpLibrary from './pages/user/SelfHelpLibrary';
 import EmergencySupport from './pages/user/EmergencySupport';
+import InitialAssessment from './pages/user/InitialAssessment';
+import DailyCheckIn from './pages/user/DailyCheckIn';
+import UserSettings from './pages/user/UserSettings';
+import { useLanguage } from './i18n';
 
 // G1-T10: minimal auth page backed by the real backend API
 import AuthPage from './pages/AuthPage';
@@ -49,6 +52,8 @@ function LoadingSpinner() {
 
 // Landing Page
 function LandingPage() {
+  const { t } = useLanguage();
+
   return (
     <>
       <LandingNav />
@@ -76,35 +81,35 @@ function LandingPage() {
                   <span className="font-semibold">MindBridge AI</span>
                 </div>
                 <p className="text-sm text-white/70">
-                  A calmer bridge to your inner world. AI-powered mental health support.
+                  {t.landing.footerDescription}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium mb-4">Product</h4>
+                <h4 className="font-medium mb-4">{t.landing.footerProduct}</h4>
                 <ul className="space-y-2 text-sm text-white/70">
-                  <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                  <li><a href="#how-it-works" className="hover:text-white transition-colors">How it works</a></li>
-                  <li><Link to="/app" className="hover:text-white transition-colors">Try app</Link></li>
+                  <li><button type="button" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-white transition-colors">{t.nav.features}</button></li>
+                  <li><button type="button" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-white transition-colors">{t.nav.howItWorks}</button></li>
+                  <li><Link to="/app" className="hover:text-white transition-colors">{t.nav.tryApp}</Link></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium mb-4">Resources</h4>
+                <h4 className="font-medium mb-4">{t.landing.footerResources}</h4>
                 <ul className="space-y-2 text-sm text-white/70">
-                  <li><a href="#safety" className="hover:text-white transition-colors">Safety</a></li>
+                  <li><button type="button" onClick={() => document.getElementById('safety')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-white transition-colors">{t.nav.safety}</button></li>
                   <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
                   <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium mb-4">Contact</h4>
+                <h4 className="font-medium mb-4">{t.landing.footerContact}</h4>
                 <ul className="space-y-2 text-sm text-white/70">
-                  <li>support@mindbridge.ai</li>
-                  <li>For organizations</li>
+                  <li>{t.landing.footerEmail}</li>
+                  <li>{t.landing.footerForOrgs}</li>
                 </ul>
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-white/50">
-              MindBridge AI does not replace professional psychological support.
+              {t.landing.footerDisclaimer}
             </div>
           </div>
         </footer>
@@ -126,11 +131,14 @@ export default function App() {
         {/* User App */}
         <Route path="/app" element={<UserLayout />}>
           <Route index element={<UserHome />} />
-          <Route path="check-in" element={<MoodCheckIn />} />
+          <Route path="onboarding" element={<InitialAssessment />} />
+          <Route path="daily" element={<DailyCheckIn />} />
+          <Route path="check-in" element={<Navigate to="/app/daily" replace />} />
           <Route path="chat" element={<AIChat />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="library" element={<SelfHelpLibrary />} />
           <Route path="emergency" element={<EmergencySupport />} />
+          <Route path="settings" element={<UserSettings />} />
         </Route>
 
         {/* Admin Dashboard */}

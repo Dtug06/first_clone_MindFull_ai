@@ -4,6 +4,7 @@ import com.mindbridge.common.audit.AuditActorType;
 import com.mindbridge.common.audit.AuditCategory;
 import com.mindbridge.common.audit.AuditService;
 import com.mindbridge.safety.event.SafetyActionStatus;
+import com.mindbridge.safety.event.SafetyActionType;
 import com.mindbridge.safety.event.SafetyEventStatus;
 import com.mindbridge.safety.event.domain.SafetyAction;
 import com.mindbridge.safety.event.domain.SafetyEvent;
@@ -146,5 +147,32 @@ public class SafetyEventService {
             return Optional.of(events.get(0));
         }
         return Optional.empty();
+    }
+
+    /** Record the exact approved template delivered for a SHOW_TEMPLATE action. */
+    @Transactional
+    public void markShowTemplateSucceeded(
+            UUID safetyEventId, UUID templateId, String templateVersion) {
+        SafetyAction action = requirePendingShowTemplate(safetyEventId);
+        action.markSucceeded(templateId, templateVersion);
+        actionRepository.save(action);
+    }
+
+    /** Record that no approved template was available; never invent content. */
+    @Transactional
+    public void markShowTemplateSkipped(UUID safetyEventId, String reason) {
+        SafetyAction action = requirePendingShowTemplate(safetyEventId);
+        action.markSkipped(null, null, reason);
+        actionRepository.save(action);
+    }
+
+    private SafetyAction requirePendingShowTemplate(UUID safetyEventId) {
+        return actionRepository.findBySafetyEventId(safetyEventId).stream()
+                .filter(action -> action.getActionType() == SafetyActionType.SHOW_TEMPLATE)
+                .filter(action -> action.getStatus() == SafetyActionStatus.PENDING)
+                .findFirst()
+                .orElseThrow(() -> new SafetyEventInputException(
+                        "Pending SHOW_TEMPLATE action not found for SafetyEvent "
+                                + safetyEventId));
     }
 }

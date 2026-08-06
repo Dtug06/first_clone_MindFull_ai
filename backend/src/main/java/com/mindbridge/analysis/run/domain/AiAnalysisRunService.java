@@ -4,6 +4,7 @@ import com.mindbridge.analysis.provider.AnalysisSchemaVersion;
 import com.mindbridge.analysis.provider.ChatAnalysisOutput;
 import com.mindbridge.analysis.provider.ChatAnalysisPromptVersion;
 import com.mindbridge.analysis.run.dto.AiRunSummary;
+import com.mindbridge.analysis.run.dto.AiAnalysisExecutionResult;
 import com.mindbridge.analysis.run.exception.AiAnalysisRunHashException;
 import com.mindbridge.analysis.run.repository.AiAnalysisRunRepository;
 import com.mindbridge.analysis.run.service.AiRunErrorRedactor;
@@ -100,6 +101,15 @@ public class AiAnalysisRunService {
      * @return the final-state snapshot.
      */
     public AiRunSummary startRun(ChatAnalysisInput input) {
+        return execute(input).run();
+    }
+
+    /**
+     * Executes an analysis run and retains the validated structured output for
+     * the in-process result persistence pipeline. Provider failures are still
+     * represented by a FAILED run and a {@code null} output.
+     */
+    public AiAnalysisExecutionResult execute(ChatAnalysisInput input) {
         if (input == null) {
             throw new IllegalArgumentException("input must not be null");
         }
@@ -156,7 +166,7 @@ public class AiAnalysisRunService {
             markFailed(runId, errorCode, summary, latencyMs, failedAt);
             log.warn("ai_analysis_run failed runId={} status=FAILED code={} latencyMs={} summary={}",
                     runId, errorCode, latencyMs, summary);
-            return requireSummary(runId);
+            return new AiAnalysisExecutionResult(requireSummary(runId), null);
         } catch (ProviderUnavailableException ex) {
             int latencyMs = (int) elapsedMillis(invokeStartNanos);
             OffsetDateTime failedAt = now();
@@ -166,7 +176,7 @@ public class AiAnalysisRunService {
             markFailed(runId, errorCode, summary, latencyMs, failedAt);
             log.warn("ai_analysis_run failed runId={} status=FAILED code={} latencyMs={} summary={}",
                     runId, errorCode, latencyMs, summary);
-            return requireSummary(runId);
+            return new AiAnalysisExecutionResult(requireSummary(runId), null);
         } catch (InvalidAnalysisOutputException ex) {
             int latencyMs = (int) elapsedMillis(invokeStartNanos);
             OffsetDateTime failedAt = now();
@@ -176,7 +186,7 @@ public class AiAnalysisRunService {
             markFailed(runId, errorCode, summary, latencyMs, failedAt);
             log.warn("ai_analysis_run failed runId={} status=FAILED code={} latencyMs={} summary={}",
                     runId, errorCode, latencyMs, summary);
-            return requireSummary(runId);
+            return new AiAnalysisExecutionResult(requireSummary(runId), null);
         } catch (RuntimeException ex) {
             // Defensive: any unexpected exception is recorded as INVALID
             // output (closest matching code). The caller still gets a
@@ -189,7 +199,7 @@ public class AiAnalysisRunService {
             markFailed(runId, errorCode, summary, latencyMs, failedAt);
             log.warn("ai_analysis_run failed runId={} status=FAILED code={} latencyMs={} summary={} causeClass={}",
                     runId, errorCode, latencyMs, summary, ex.getClass().getSimpleName());
-            return requireSummary(runId);
+            return new AiAnalysisExecutionResult(requireSummary(runId), null);
         } finally {
             // Always clear the per-thread response context so a
             // subsequent (non-real) call on the same thread never
@@ -232,7 +242,7 @@ public class AiAnalysisRunService {
 
         log.info("ai_analysis_run succeeded runId={} status=SUCCEEDED latencyMs={} modelRiskLevel={} confidence={}",
                 runId, latencyMs, output.modelRiskLevel(), output.confidence());
-        return requireSummary(runId);
+        return new AiAnalysisExecutionResult(requireSummary(runId), output);
     }
 
     // --- Private helpers (transaction boundaries). ---

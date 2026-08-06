@@ -208,11 +208,11 @@ paths:
               $ref: "#/components/schemas/SendMessageRequest"
       responses:
         "201":
-          description: Message stored
+          description: User message stored and assistant reply attempted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatMessageResponse"
+                $ref: "#/components/schemas/ChatTurnResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -875,6 +875,27 @@ components:
             - PENDING
             - SUCCEEDED
             - FAILED
+
+    ChatTurnResponse:
+      allOf:
+        - $ref: "#/components/schemas/ChatMessageResponse"
+        - type: object
+          required:
+            - replyStatus
+          properties:
+            assistantMessage:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/ChatMessageResponse"
+            replyStatus:
+              type: string
+              description: Outcome of the assistant-reply attempt after the user message was stored.
+              enum:
+                - SUCCEEDED
+                - CONSENT_REQUIRED
+                - SAFETY_UNAVAILABLE
+                - SAFETY_TEMPLATE_MISSING
+                - PROVIDER_UNAVAILABLE
 
     ChatMessagePageResponse:
       type: object

@@ -3,6 +3,10 @@ package com.mindbridge.chat.service;
 import com.mindbridge.behavior.domain.BehavioralEventType;
 import com.mindbridge.behavior.domain.SourceType;
 import com.mindbridge.behavior.service.BehavioralEventService;
+import com.mindbridge.analysis.result.domain.ResultAnalysisStatus;
+import com.mindbridge.analysis.result.repository.ChatAnalysisResultRepository;
+import com.mindbridge.analysis.run.repository.AiAnalysisRunRepository;
+import com.mindbridge.chat.ai.ConversationResponseInput.HistoryMessage;
 import com.mindbridge.chat.domain.ChatSession;
 import com.mindbridge.chat.domain.ConversationMessage;
 import com.mindbridge.chat.domain.ChatSessionStatus;
@@ -24,6 +28,7 @@ import com.mindbridge.safety.dto.PreFilterInput;
 import com.mindbridge.safety.dto.PreFilterResult;
 import com.mindbridge.safety.event.SafetyActionType;
 import com.mindbridge.safety.event.SafetyEventSourceType;
+import com.mindbridge.safety.event.domain.SafetyEvent;
 import com.mindbridge.safety.event.dto.SafetyActionSpec;
 import com.mindbridge.safety.event.dto.SafetyEventSourceSpec;
 import com.mindbridge.safety.event.service.SafetyEventService;
@@ -32,9 +37,14 @@ import com.mindbridge.safety.resolver.dto.ResolverDecision;
 import com.mindbridge.safety.resolver.dto.ResolverInput;
 import com.mindbridge.safety.resolver.service.SafetyResolverService;
 import com.mindbridge.safety.service.SafetyPreFilterService;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +87,8 @@ public class ConversationMessageService {
     private final RiskClassifierProvider riskClassifierProvider;
     private final SafetyResolverService resolverService;
     private final SafetyEventService safetyEventService;
+    private final ChatAnalysisResultRepository analysisResultRepository;
+    private final AiAnalysisRunRepository analysisRunRepository;
 
     public ConversationMessageService(
             ConversationMessageRepository messageRepository,
@@ -90,7 +102,9 @@ public class ConversationMessageService {
             SafetyPreFilterService preFilterService,
             RiskClassifierProvider riskClassifierProvider,
             SafetyResolverService resolverService,
-            SafetyEventService safetyEventService) {
+            SafetyEventService safetyEventService,
+            ChatAnalysisResultRepository analysisResultRepository,
+            AiAnalysisRunRepository analysisRunRepository) {
         this.messageRepository = messageRepository;
         this.sessionRepository = sessionRepository;
         this.mapper = mapper;
@@ -103,6 +117,8 @@ public class ConversationMessageService {
         this.riskClassifierProvider = riskClassifierProvider;
         this.resolverService = resolverService;
         this.safetyEventService = safetyEventService;
+        this.analysisResultRepository = analysisResultRepository;
+        this.analysisRunRepository = analysisRunRepository;
     }
 
     /**
@@ -138,6 +154,16 @@ public class ConversationMessageService {
      */
     @Transactional
     public ChatMessageResponse sendMessage(UUID sessionId, String content) {
+        return processUserMessage(sessionId, content).userMessage();
+    }
+
+    /**
+     * Persists the user message and evaluates the independent Safety pipeline.
+     * The conversational LLM call happens later in {@link ConversationTurnService},
+     * after this transaction has completed.
+     */
+    @Transactional
+    public MessageProcessingResult processUserMessage(UUID sessionId, String content) {
         ChatSession session = requireSessionAccess(sessionId);
 
         if (session.getStatus() == ChatSessionStatus.CLOSED) {
@@ -160,7 +186,7 @@ public class ConversationMessageService {
         // inside the safety pipeline the raw message is still saved
         // (AI failure must not lose the raw message —
         // docs/01_ARCHITECTURE.md §7).
-        evaluateSafetyPipeline(saved, userId, processedContent);
+        SafetyEvaluation safety = evaluateSafetyPipeline(saved, userId, processedContent);
 
         // G2-T07: emit CHAT_MESSAGE_SENT event. Properties NEVER include raw
         // content — only length, role, redaction flag (see G2-T07 plan §2.3).
@@ -174,7 +200,7 @@ public class ConversationMessageService {
                 SourceType.CONVERSATION_MESSAGE,
                 saved.getId(),
                 props);
-        return mapper.toResponse(saved);
+        return new MessageProcessingResult(mapper.toResponse(saved), safety);
     }
 
     /**
@@ -192,10 +218,10 @@ public class ConversationMessageService {
      * NOT be lost (docs/01 §7). Failures bubble up only when they
      * affect the raw-message persistence (i.e. they don't).
      */
-    private void evaluateSafetyPipeline(
+    private SafetyEvaluation evaluateSafetyPipeline(
             ConversationMessage saved, UUID userId, String processedContent) {
         if (!consentGuard.hasChatAnalysisConsent(userId)) {
-            return;
+            return SafetyEvaluation.consentRequired();
         }
         try {
             PreFilterResult preFilter = preFilterService.evaluate(
@@ -211,20 +237,99 @@ public class ConversationMessageService {
                     preFilter,
                     classifier));
 
+            UUID safetyEventId = null;
             if (decision.finalRiskLevel() >= SafetyEventService.BLOCKING_THRESHOLD) {
-                safetyEventService.recordLevel3Or4Event(
+                SafetyEvent event = safetyEventService.recordLevel3Or4Event(
                         decision,
                         List.of(new SafetyEventSourceSpec(
                                 SafetyEventSourceType.CHAT_ANALYSIS, saved.getId())),
                         List.of(
+                                new SafetyActionSpec(SafetyActionType.SHOW_TEMPLATE),
                                 new SafetyActionSpec(SafetyActionType.BLOCK_MATCHING),
                                 new SafetyActionSpec(SafetyActionType.FLAG_REVIEW)));
+                safetyEventId = event.getId();
             }
+            return SafetyEvaluation.evaluated(decision, safetyEventId);
         } catch (RuntimeException ex) {
             // Log warn only — message id, exception class, no raw content.
             log.warn("Safety pipeline failed for messageId={} cause={}",
                     saved.getId(), ex.toString());
+            return SafetyEvaluation.failed();
         }
+    }
+
+    /** Persist an assistant response after the external call has completed. */
+    @Transactional
+    public ChatMessageResponse saveAssistantMessage(
+            UUID sessionId, UUID expectedUserId, String content) {
+        ChatSession session = requireSessionAccess(sessionId);
+        if (!session.getUserId().equals(expectedUserId)) {
+            throw new AccessDeniedException("Chat session does not belong to the current user");
+        }
+        ConversationMessage saved = messageRepository.save(
+                ConversationMessage.createAssistantMessage(
+                        sessionId, expectedUserId, content));
+
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("message_length", saved.getContent().length());
+        props.put("role", "ASSISTANT");
+        props.put("was_redacted", false);
+        behavioralEventService.record(
+                expectedUserId,
+                BehavioralEventType.CHAT_MESSAGE_SENT,
+                SourceType.CONVERSATION_MESSAGE,
+                saved.getId(),
+                props);
+        return mapper.toResponse(saved);
+    }
+
+    /** Return the latest redacted USER/ASSISTANT messages in chronological order. */
+    @Transactional(readOnly = true)
+    public List<HistoryMessage> recentHistory(UUID sessionId) {
+        requireSessionAccess(sessionId);
+        List<ConversationMessage> recent = new ArrayList<>(
+                messageRepository.findTop20BySessionIdOrderByCreatedAtDesc(sessionId));
+        Collections.reverse(recent);
+        return recent.stream()
+                .filter(message -> message.getRole() != com.mindbridge.chat.domain.MessageRole.SYSTEM)
+                .map(message -> new HistoryMessage(
+                        message.getRole() == com.mindbridge.chat.domain.MessageRole.USER
+                                ? "user" : "assistant",
+                        message.getContent()))
+                .toList();
+    }
+
+    public record MessageProcessingResult(
+            ChatMessageResponse userMessage,
+            SafetyEvaluation safety) {
+    }
+
+    public record SafetyEvaluation(
+            SafetyEvaluationStatus status,
+            ResolverDecision decision,
+            UUID safetyEventId) {
+
+        static SafetyEvaluation consentRequired() {
+            return new SafetyEvaluation(
+                    SafetyEvaluationStatus.CONSENT_REQUIRED, null, null);
+        }
+
+        static SafetyEvaluation failed() {
+            return new SafetyEvaluation(
+                    SafetyEvaluationStatus.FAILED, null, null);
+        }
+
+        static SafetyEvaluation evaluated(
+                ResolverDecision decision, UUID safetyEventId) {
+            return new SafetyEvaluation(
+                    SafetyEvaluationStatus.EVALUATED, decision, safetyEventId);
+        }
+    }
+
+    public enum SafetyEvaluationStatus {
+        EVALUATED,
+        CONSENT_REQUIRED,
+        FAILED
     }
 
     /**
@@ -285,13 +390,58 @@ public class ConversationMessageService {
         Pageable pageable = PageRequest.of(page, size);
         Page<ConversationMessage> pageResult =
                 messageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId, pageable);
+        Map<UUID, ChatMessageResponse.AnalysisStatus> analysisStatuses =
+                resolveAnalysisStatuses(pageResult.getContent());
 
         return new PageResponse<>(
-                pageResult.getContent().stream().map(mapper::toResponse).toList(),
+                pageResult.getContent().stream()
+                        .map(message -> mapper.toResponse(
+                                message,
+                                analysisStatuses.getOrDefault(
+                                        message.getId(),
+                                        ChatMessageResponse.AnalysisStatus.NOT_REQUESTED)))
+                        .toList(),
                 pageResult.getNumber(),
                 pageResult.getSize(),
                 pageResult.getTotalElements(),
                 pageResult.getTotalPages()
         );
+    }
+
+    private Map<UUID, ChatMessageResponse.AnalysisStatus> resolveAnalysisStatuses(
+            List<ConversationMessage> messages) {
+        List<UUID> userMessageIds = messages.stream()
+                .filter(message -> message.getRole()
+                        == com.mindbridge.chat.domain.MessageRole.USER)
+                .map(ConversationMessage::getId)
+                .toList();
+        if (userMessageIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, ChatMessageResponse.AnalysisStatus> statuses = new HashMap<>();
+        Set<UUID> succeeded = new HashSet<>();
+        analysisResultRepository.findByConversationMessageIdInAndAnalysisStatus(
+                        userMessageIds, ResultAnalysisStatus.ACTIVE)
+                .forEach(result -> {
+                    succeeded.add(result.getConversationMessageId());
+                    statuses.put(result.getConversationMessageId(),
+                            ChatMessageResponse.AnalysisStatus.SUCCEEDED);
+                });
+
+        analysisRunRepository.findByMessageIdInOrderByCreatedAtDesc(userMessageIds)
+                .forEach(run -> {
+                    UUID messageId = run.getMessageId();
+                    if (succeeded.contains(messageId) || statuses.containsKey(messageId)) {
+                        return;
+                    }
+                    ChatMessageResponse.AnalysisStatus status = switch (run.getStatus()) {
+                        case PENDING, RUNNING -> ChatMessageResponse.AnalysisStatus.PENDING;
+                        case SUCCEEDED -> ChatMessageResponse.AnalysisStatus.SUCCEEDED;
+                        case FAILED -> ChatMessageResponse.AnalysisStatus.FAILED;
+                    };
+                    statuses.put(messageId, status);
+                });
+        return statuses;
     }
 }

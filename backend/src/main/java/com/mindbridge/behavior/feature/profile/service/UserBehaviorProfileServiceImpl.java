@@ -13,9 +13,11 @@ import com.mindbridge.behavior.feature.profile.dto.WindowType;
 import com.mindbridge.behavior.feature.profile.entity.UserBehaviorProfile;
 import com.mindbridge.behavior.feature.profile.repository.UserBehaviorProfileRepository;
 import com.mindbridge.behavior.feature.window.repository.UserDailyFeatureWindowRepository;
+import com.mindbridge.auth.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -43,6 +45,8 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
     private final UserDailyFeatureWindowRepository windowRepository;
     private DbDialect dialect = DbDialect.UNKNOWN;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final Clock clock;
 
     @Autowired
     private Environment environment;
@@ -53,10 +57,14 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
     public UserBehaviorProfileServiceImpl(
             UserBehaviorProfileRepository repository,
             UserDailyFeatureWindowRepository windowRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            UserRepository userRepository,
+            Clock clock) {
         this.repository = repository;
         this.windowRepository = windowRepository;
         this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
+        this.clock = clock;
         this.dialect = DbDialect.UNKNOWN;
         log.info("G4-T09 dialect unresolved at construction; will resolve on first upsert");
     }
@@ -354,7 +362,12 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
     @Transactional(readOnly = true)
     public List<FeatureSeriesPoint> getSeries(UUID userId, WindowType windowType, FeatureType feature) {
         int windowSize = windowType == WindowType.WINDOW_7D ? 7 : 30;
-        LocalDate targetDate = LocalDate.now(ZoneId.systemDefault());
+        ZoneId userZone = userRepository.findById(userId)
+                .map(user -> user.getTimezone())
+                .filter(value -> value != null && !value.isBlank())
+                .map(ZoneId::of)
+                .orElse(ZoneId.of("UTC"));
+        LocalDate targetDate = LocalDate.now(clock.withZone(userZone));
         LocalDate windowStart = targetDate.minusDays(windowSize - 1);
 
         List<UserDailyFeature> rows = windowRepository.findByUserAndWindow(userId, windowStart, targetDate);

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { MoodOption } from '../../types';
+import { useLanguage } from '../../i18n';
 
 interface MoodOrbProps {
   mood: MoodOption;
@@ -7,8 +8,8 @@ interface MoodOrbProps {
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
 }
-
 export default function MoodOrb({ mood, selected, onClick, size = 'md' }: MoodOrbProps) {
+  const { t } = useLanguage();
   const sizeConfig = {
     sm: { orb: 48, emoji: 'text-lg', label: 'text-xs' },
     md: { orb: 72, emoji: 'text-2xl', label: 'text-sm' },
@@ -16,6 +17,7 @@ export default function MoodOrb({ mood, selected, onClick, size = 'md' }: MoodOr
   };
 
   const config = sizeConfig[size];
+  const label = t.data.mood[mood.i18nKey];
 
   return (
     <motion.button
@@ -51,7 +53,7 @@ export default function MoodOrb({ mood, selected, onClick, size = 'md' }: MoodOr
         </span>
       </motion.div>
       <span className={`${config.label} font-medium ${selected ? 'text-textMain' : 'text-textMuted'}`}>
-        {mood.label}
+        {label}
       </span>
     </motion.button>
   );

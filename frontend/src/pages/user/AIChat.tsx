@@ -14,8 +14,10 @@ import {
 } from '../../api/idempotency';
 import type {
   ChatMessageResponse,
+  ChatReplyStatus,
   ChatSessionResponse,
 } from '../../api/chat';
+import { useLanguage } from '../../i18n';
 
 const SESSION_STORAGE_KEY = 'mb:chat:sessionId';
 const HISTORY_PAGE_SIZE = 20;
@@ -25,8 +27,24 @@ type LoadState =
   | { kind: 'loading-history' }
   | { kind: 'creating-session' };
 
+function replyStatusMessage(status: ChatReplyStatus): string | null {
+  switch (status) {
+    case 'SUCCEEDED':
+      return null;
+    case 'CONSENT_REQUIRED':
+      return 'AI replies require CHAT_ANALYSIS consent. Your message was saved, but it was not sent to the AI provider.';
+    case 'SAFETY_UNAVAILABLE':
+      return 'MindBridge saved your message but could not complete the Safety check, so no AI reply was generated.';
+    case 'SAFETY_TEMPLATE_MISSING':
+      return 'MindBridge saved your message but no approved Safety response template is configured.';
+    case 'PROVIDER_UNAVAILABLE':
+      return 'MindBridge saved your message, but the AI provider is unavailable. Please try again later.';
+  }
+}
+
 export default function AIChat() {
   const { chatApi, lastRequestId, primeLastRequestId } = useAuth();
+  const { t } = useLanguage();
 
   const [session, setSession] = useState<ChatSessionResponse | null>(null);
   const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
@@ -51,6 +69,17 @@ export default function AIChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  const createNewSession = useCallback(async (): Promise<ChatSessionResponse> => {
+    setLoadState({ kind: 'creating-session' });
+    const created = await chatApi.createSession({});
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, created.id);
+    setSession(created);
+    setMessages([]);
+    setHistoryPage(0);
+    setHasMoreHistory(false);
+    return created;
+  }, [chatApi]);
 
   const ensureSession = useCallback(async (): Promise<ChatSessionResponse> => {
     if (session) {
@@ -82,7 +111,7 @@ export default function AIChat() {
         if (e instanceof ApiError) {
           // 404 → session doesn't exist anymore (cleared server-side, or
           // owned by another user since we encode no principal in the id).
-          if (e.status === 404) {
+          if (e.status === 404 || e.status === 403) {
             window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
           } else {
             throw e;
@@ -92,15 +121,8 @@ export default function AIChat() {
         }
       }
     }
-    setLoadState({ kind: 'creating-session' });
-    const created = await chatApi.createSession({});
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, created.id);
-    setSession(created);
-    setMessages([]);
-    setHistoryPage(0);
-    setHasMoreHistory(false);
-    return created;
-  }, [chatApi, session]);
+    return createNewSession();
+  }, [chatApi, createNewSession, session]);
 
   // Initial load: resolve session, then load history.
   useEffect(() => {
@@ -188,19 +210,27 @@ export default function AIChat() {
     }
 
     try {
-      const saved = await chatApi.sendMessage(
+      const turn = await chatApi.sendMessage(
         session.id,
         { content: trimmed },
         idemKey,
       );
-      setMessages((prev) => [...prev, saved]);
+      setMessages((prev) => [
+        ...prev,
+        turn,
+        ...(turn.assistantMessage ? [turn.assistantMessage] : []),
+      ]);
+      const replyError = replyStatusMessage(turn.replyStatus);
+      if (replyError) {
+        setError({ message: replyError, code: turn.replyStatus });
+      }
       forgetIdempotencyKey(anchor);
     } catch (e) {
       if (e instanceof ApiError) {
         setError({ message: friendlyMessage(e), code: e.code });
         primeLastRequestId(e.requestId);
         // 404 on stale session — try to create a new one next send.
-        if (e.status === 404) {
+        if (e.status === 404 || e.status === 403) {
           window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
           setSession(null);
           setMessages([]);
@@ -229,7 +259,7 @@ export default function AIChat() {
       window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
       setSession(null);
       setMessages([]);
-      await ensureSession();
+      await createNewSession();
     } catch (e) {
       if (e instanceof ApiError) {
         setError({ message: e.message, code: e.code });
@@ -249,10 +279,10 @@ export default function AIChat() {
             <JellyfishMascot size="sm" />
           </div>
           <div>
-            <h1 className="font-semibold text-textMain">Jellyfish Companion</h1>
+            <h1 className="font-semibold text-textMain">{t.user.chatTitle}</h1>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm text-textMuted">Here to listen</span>
+              <span className="text-sm text-textMuted">{t.data.ui.hereToListen}</span>
             </div>
           </div>
         </div>
@@ -327,7 +357,7 @@ export default function AIChat() {
             >
               <JellyfishMascot size="lg" animated />
               <p className="text-textMuted mt-4 text-center max-w-sm">
-                I'm here to listen. Share what's on your mind, or try one of the suggestions below.
+                {t.data.ui.shareWhatsOnMind}
               </p>
             </motion.div>
           )}
@@ -401,7 +431,7 @@ export default function AIChat() {
       {messages.length === 0 && !error && loadState.kind === 'idle' && (
         <div className="px-4 pb-4">
           <div className="max-w-3xl mx-auto">
-            <p className="text-sm text-textMuted mb-3">You could start with:</p>
+            <p className="text-sm text-textMuted mb-3">{t.data.ui.startWith}</p>
             <div className="flex flex-wrap gap-2">
               {suggestedPrompts.map((prompt, i) => (
                 <motion.button
@@ -434,7 +464,7 @@ export default function AIChat() {
                   handleSend();
                 }
               }}
-              placeholder="Share what's on your mind..."
+              placeholder={t.data.ui.chatPlaceholder}
               className="flex-1 px-4 py-3 bg-surfaceMuted rounded-2xl text-textMain placeholder:text-textMuted/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={isSending || !session}
             />

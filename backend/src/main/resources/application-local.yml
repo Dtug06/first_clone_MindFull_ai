@@ -61,5 +61,4 @@ logging:
 # --- G1-T10: CORS for local development (Vite default port) ---
 mindbridge:
   cors:
-    allowed-origins:
-      - http://localhost:5173
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}

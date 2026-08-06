@@ -1,17 +1,36 @@
 import { motion } from 'framer-motion';
 import SectionHeader from '../ui/SectionHeader';
+import { useLanguage } from '../../i18n';
 
 export default function SafetyPrivacySection() {
+  const { t } = useLanguage();
+
+  const safetyItems = [
+    t.landing.safetyList1,
+    t.landing.safetyList2,
+    t.landing.safetyList3,
+    t.landing.safetyList4,
+    t.landing.safetyList5,
+  ];
+
+  const privacyItems = [
+    t.landing.privacyList1,
+    t.landing.privacyList2,
+    t.landing.privacyList3,
+    t.landing.privacyList4,
+    t.landing.privacyList5,
+  ];
+
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section id="safety" className="py-24 bg-background relative overflow-hidden">
       {/* Subtle gradient orbs */}
       <div className="absolute top-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-20 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
-          title="Your safety comes first"
-          subtitle="We've built multiple layers of protection to ensure MindBridge AI supports you responsibly."
+          title={t.landing.safetyTitle}
+          subtitle={t.landing.safetySubtitle}
         />
 
         {/* Main content */}
@@ -29,17 +48,11 @@ export default function SafetyPrivacySection() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-textMain">AI Safety First</h3>
+              <h3 className="text-xl font-semibold text-textMain">{t.landing.safetyCardTitle}</h3>
             </div>
             
             <ul className="space-y-4">
-              {[
-                "All AI responses are safety-checked before delivery",
-                "Risk signals trigger immediate support pathways",
-                "Clinical safety layer prevents harmful advice",
-                "Human experts review escalated cases",
-                "We never replace professional psychological support",
-              ].map((item, i) => (
+              {safetyItems.map((item, i) => (
                 <motion.li
                   key={i}
                   className="flex items-start gap-3"
@@ -73,17 +86,11 @@ export default function SafetyPrivacySection() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-textMain">Privacy Protected</h3>
+              <h3 className="text-xl font-semibold text-textMain">{t.landing.privacyCardTitle}</h3>
             </div>
             
             <ul className="space-y-4">
-              {[
-                "You own and control your data at all times",
-                "We collect only what's necessary for your care",
-                "Data is encrypted both in transit and at rest",
-                "Anonymous aggregated data helps improve care",
-                "You can delete your data anytime",
-              ].map((item, i) => (
+              {privacyItems.map((item, i) => (
                 <motion.li
                   key={i}
                   className="flex items-start gap-3"
@@ -113,9 +120,7 @@ export default function SafetyPrivacySection() {
           transition={{ delay: 0.3 }}
         >
           <p className="text-textMuted max-w-2xl mx-auto">
-            <strong className="text-textMain">Important:</strong> MindBridge AI does not replace professional 
-            psychological or psychiatric services. If you're experiencing a mental health crisis, 
-            please reach out to a qualified healthcare provider or emergency services.
+            <strong className="text-textMain">{t.landing.safetyDisclaimerLabel}</strong> {t.landing.safetyDisclaimer}
           </p>
         </motion.div>
       </div>

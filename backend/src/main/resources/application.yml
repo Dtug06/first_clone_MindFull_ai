@@ -72,6 +72,25 @@ mindbridge:
     run:
       enabled: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_ENABLED:false}
       target: ${MINDBRIDGE_FEATURE_AGGREGATION_RUN_TARGET:}
+  # G4-T09 current-profile aggregation. Disabled until expert-reviewed
+  # trend and data-quality thresholds are supplied.
+  profile-aggregation:
+    enabled: ${MINDBRIDGE_PROFILE_AGGREGATION_ENABLED:false}
+    schedule-cron: ${MINDBRIDGE_PROFILE_AGGREGATION_SCHEDULE_CRON:0 15 3 * * *}
+    batch-size: ${MINDBRIDGE_PROFILE_AGGREGATION_BATCH_SIZE:100}
+    run:
+      enabled: ${MINDBRIDGE_PROFILE_AGGREGATION_RUN_ENABLED:false}
+      target: ${MINDBRIDGE_PROFILE_AGGREGATION_RUN_TARGET:}
+  # TODO_EXPERT_REVIEW: deliberately no numeric production defaults.
+  data-quality:
+    min-coverage-for-low: ${MINDBRIDGE_DATA_QUALITY_MIN_COVERAGE_LOW:}
+    min-coverage-for-sufficient: ${MINDBRIDGE_DATA_QUALITY_MIN_COVERAGE_SUFFICIENT:}
+    min-confidence: ${MINDBRIDGE_DATA_QUALITY_MIN_CONFIDENCE:}
+  # TODO_EXPERT_REVIEW: deliberately no numeric production defaults.
+  trend:
+    min-trend-coverage: ${MIN_TREND_COVERAGE:}
+    trend-delta-threshold: ${TREND_DELTA_THRESHOLD:}
+    high-stress-threshold: ${HIGH_STRESS_THRESHOLD:}
   # --- G3-T01: AI analysis provider selection ---
   # Values: "mock" (default, offline, deterministic) or "real" (external LLM, G3-T06).
   # Override via env: MINDBRIDGE_AI_PROVIDER=real.
@@ -132,6 +151,17 @@ mindbridge:
       # and the risk-classifier pipelines).
       max-retries: ${MINDBRIDGE_AI_REAL_MAX_RETRIES:1}
       request-timeout-ms: ${MINDBRIDGE_AI_REAL_REQUEST_TIMEOUT_MS:20000}
+    # Conversational response generation is separate from structured analysis
+    # and the independent risk classifier. MINDBRIDGE_AI_PROVIDER=real enables
+    # both analysis and conversation unless this provider is overridden.
+    response:
+      provider: ${MINDBRIDGE_AI_RESPONSE_PROVIDER:${MINDBRIDGE_AI_PROVIDER:mock}}
+      # Responses API endpoint; may point to an approved OpenAI-compatible gateway.
+      api-base-url: ${MINDBRIDGE_AI_RESPONSE_API_BASE_URL:${MINDBRIDGE_AI_REAL_API_BASE_URL:https://api.openai.com/v1}}
+      model: ${MINDBRIDGE_AI_RESPONSE_MODEL:gpt-5.5}
+      max-output-tokens: ${MINDBRIDGE_AI_RESPONSE_MAX_OUTPUT_TOKENS:600}
+      reasoning-effort: ${MINDBRIDGE_AI_RESPONSE_REASONING_EFFORT:low}
+      request-timeout-ms: ${MINDBRIDGE_AI_RESPONSE_REQUEST_TIMEOUT_MS:60000}
     # --- G3-T07: shared retry / fallback namespace ---
     # Applied to BOTH ChatAnalysisProvider (chat pipeline) and
     # RiskClassifierProvider (Safety pipeline). The values below
@@ -167,7 +197,3 @@ mindbridge:
 # expert review on `Pre_G4 §13.1` is signed off.
 # HIGH_STRESS_THRESHOLD is on the normalized 0-1 stress_score scale
 # (NOT the raw 1-10 stress_raw_value scale) — resolved G4-T07 Phase 3 F-1.
-trend:
-  min-trend-coverage: ${MIN_TREND_COVERAGE:0.5}
-  trend-delta-threshold: ${TREND_DELTA_THRESHOLD:0.1}
-  high-stress-threshold: ${HIGH_STRESS_THRESHOLD:0.75}

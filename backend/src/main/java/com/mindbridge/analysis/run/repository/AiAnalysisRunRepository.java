@@ -41,6 +41,9 @@ public interface AiAnalysisRunRepository extends JpaRepository<AiAnalysisRun, UU
      */
     List<AiAnalysisRun> findByMessageIdOrderByCreatedAtDesc(UUID messageId);
 
+    /** Batch read, newest first, used to derive API analysis status. */
+    List<AiAnalysisRun> findByMessageIdInOrderByCreatedAtDesc(List<UUID> messageIds);
+
     /**
      * Most-recent-first list of all runs in the given status.
      * Backed by the {@code ai_analysis_runs_status_created_desc}

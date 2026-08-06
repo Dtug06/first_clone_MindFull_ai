@@ -132,6 +132,12 @@ public final class DataQualityConfig {
      *                             before evaluation)
      */
     public DataQualityStatus evaluate(BigDecimal dataCoverage, BigDecimal confidence) {
+        if (minCoverageForLow == null
+                || minCoverageForSufficient == null
+                || minConfidence == null) {
+            throw new IllegalStateException(
+                    "TODO_EXPERT_REVIEW: data-quality thresholds must be configured before profile aggregation");
+        }
         if (confidence.compareTo(minConfidence) < 0) {
             return DataQualityStatus.INSUFFICIENT;
         }

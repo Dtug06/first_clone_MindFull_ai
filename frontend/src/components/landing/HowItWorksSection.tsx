@@ -1,41 +1,44 @@
 import { motion } from 'framer-motion';
 import SectionHeader from '../ui/SectionHeader';
 import { UserPlus, ClipboardList, Brain, Heart, Sparkles, TrendingUp } from 'lucide-react';
-
-const steps = [
-  {
-    icon: UserPlus,
-    title: "Create your account",
-    description: "Sign up in seconds with just your email. No complex forms, no invasive questions.",
-    color: "#5F9E97",
-  },
-  {
-    icon: ClipboardList,
-    title: "Initial assessment",
-    description: "A gentle, guided conversation to understand your current emotional state and needs.",
-    color: "#6F86A6",
-  },
-  {
-    icon: Brain,
-    title: "Build your profile",
-    description: "We create a dynamic mental health profile that evolves with you over time.",
-    color: "#D8C7A8",
-  },
-  {
-    icon: Heart,
-    title: "Daily check-ins",
-    description: "Quick, mindful moments to track your mood and reflect on your feelings.",
-    color: "#5F9E97",
-  },
-  {
-    icon: Sparkles,
-    title: "Get personalized support",
-    description: "Receive tailored recommendations, exercises, and resources based on your journey.",
-    color: "#6F86A6",
-  },
-];
+import { useLanguage } from '../../i18n';
 
 export default function HowItWorksSection() {
+  const { t } = useLanguage();
+
+  const steps = [
+    {
+      icon: UserPlus,
+      title: t.landing.howStep1Title,
+      description: t.landing.howStep1Desc,
+      color: "#5F9E97",
+    },
+    {
+      icon: ClipboardList,
+      title: t.landing.howStep2Title,
+      description: t.landing.howStep2Desc,
+      color: "#6F86A6",
+    },
+    {
+      icon: Brain,
+      title: t.landing.howStep3Title,
+      description: t.landing.howStep3Desc,
+      color: "#D8C7A8",
+    },
+    {
+      icon: Heart,
+      title: t.landing.howStep4Title,
+      description: t.landing.howStep4Desc,
+      color: "#5F9E97",
+    },
+    {
+      icon: Sparkles,
+      title: t.landing.howStep5Title,
+      description: t.landing.howStep5Desc,
+      color: "#6F86A6",
+    },
+  ];
+
   return (
     <section id="how-it-works" className="py-24 bg-background relative overflow-hidden">
       {/* Decorative elements */}
@@ -44,8 +47,8 @@ export default function HowItWorksSection() {
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
-          title="A gentle journey"
-          subtitle="Five simple steps to start your path to better mental wellness."
+          title={t.landing.howTitle}
+          subtitle={t.landing.howSubtitle}
         />
 
         {/* Steps */}
@@ -114,7 +117,7 @@ export default function HowItWorksSection() {
           <div className="inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-full">
             <TrendingUp className="w-5 h-5 text-primary" />
             <span className="text-textMain font-medium">
-              Track your progress and celebrate your growth
+              {t.landing.howResult}
             </span>
           </div>
         </motion.div>

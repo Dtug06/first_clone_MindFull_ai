@@ -52,8 +52,8 @@ export interface CheckinHistoryResponse {
   answers: DailyAnswerResponse[];
 }
 
-/** Template code that drives the optional free-text "anything on your mind?" field. */
-export const OPEN_NOTE_TEMPLATE_CODE = 'OPEN_NOTE';
+/** Approved backend template code for the optional free-text daily note. */
+export const OPEN_NOTE_TEMPLATE_CODE = 'OPEN';
 
 export class DailyQuestionApi {
   constructor(private readonly client: ApiClient) {}

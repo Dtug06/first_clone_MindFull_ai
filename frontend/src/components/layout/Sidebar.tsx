@@ -12,25 +12,27 @@ import {
   LogOut,
   X
 } from 'lucide-react';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
+import { useLanguage } from '../../i18n';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Overview', exact: true },
-  { path: '/admin/users', icon: Users, label: 'User Management' },
-  { path: '/admin/risk', icon: AlertTriangle, label: 'Risk Monitoring' },
-  { path: '/admin/experts', icon: UserCog, label: 'Expert Management' },
-  { path: '/admin/content', icon: BookOpen, label: 'Content Library' },
-  { path: '/admin/ai', icon: Brain, label: 'AI & Knowledge Base' },
-  { path: '/admin/organizations', icon: Building2, label: 'Organizations' },
-  { path: '/admin/settings', icon: Settings, label: 'Settings & Logs' },
-];
-
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { path: '/admin', icon: LayoutDashboard, label: t.nav.overview, exact: true },
+    { path: '/admin/users', icon: Users, label: t.nav.userManagement },
+    { path: '/admin/risk', icon: AlertTriangle, label: t.nav.riskMonitoring },
+    { path: '/admin/experts', icon: UserCog, label: t.nav.expertManagement },
+    { path: '/admin/content', icon: BookOpen, label: t.nav.contentLibrary },
+    { path: '/admin/ai', icon: Brain, label: t.nav.aiKnowledgeBase },
+    { path: '/admin/organizations', icon: Building2, label: t.nav.organizations },
+    { path: '/admin/settings', icon: Settings, label: t.nav.settingsLogs },
+  ];
 
   return (
     <>
@@ -68,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
                 <div>
                   <h1 className="font-semibold text-textMain">MindBridge</h1>
-                  <p className="text-xs text-textMuted">Admin Portal</p>
+                  <p className="text-xs text-textMuted">{t.nav.adminPortal}</p>
                 </div>
               </div>
               <button
@@ -114,10 +116,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-gray-100 space-y-2">
+            <div className="px-2">
+              <LanguageSwitcher variant="pill" />
+            </div>
             <button className="flex items-center gap-3 px-4 py-3 w-full text-textMuted hover:text-softWarning hover:bg-softWarning/5 rounded-xl transition-all">
               <LogOut className="w-5 h-5" />
-              <span className="font-medium text-sm">Sign Out</span>
+              <span className="font-medium text-sm">{t.common.signOut}</span>
             </button>
           </div>
         </div>

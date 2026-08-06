@@ -1,7 +1,34 @@
 import { motion } from 'framer-motion';
 import { Building2, Users, BarChart2, Shield } from 'lucide-react';
+import { useLanguage } from '../../i18n';
 
 export default function OrganizationsSection() {
+  const { t } = useLanguage();
+
+  const orgFeatures = [
+    {
+      icon: BarChart2,
+      title: t.landing.orgsFeature1Title,
+      description: t.landing.orgsFeature1Desc,
+    },
+    {
+      icon: Shield,
+      title: t.landing.orgsFeature2Title,
+      description: t.landing.orgsFeature2Desc,
+    },
+    {
+      icon: Users,
+      title: t.landing.orgsFeature3Title,
+      description: t.landing.orgsFeature3Desc,
+    },
+  ];
+
+  const topics = [
+    { topic: t.admin.resourceAcademic, count: 156 },
+    { topic: t.admin.resourceWorkLife, count: 134 },
+    { topic: t.admin.resourceMindfulness, count: 98 },
+  ];
+
   return (
     <section className="py-24 bg-surfaceMuted relative overflow-hidden">
       <div className="absolute inset-0">
@@ -20,37 +47,19 @@ export default function OrganizationsSection() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/10 rounded-full mb-6">
               <Building2 className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-secondary">For Organizations</span>
+              <span className="text-sm font-medium text-secondary">{t.landing.orgsBadge}</span>
             </div>
             
             <h2 className="text-3xl md:text-4xl font-semibold text-textMain mb-6">
-              Support your community's mental wellness
+              {t.landing.orgsTitle}
             </h2>
             
             <p className="text-lg text-textMuted mb-8 leading-relaxed">
-              Universities, companies, and organizations can access anonymous aggregated 
-              dashboards to understand the mental wellness trends of their community — 
-              without compromising individual privacy.
+              {t.landing.orgsDescription}
             </p>
 
             <div className="space-y-4">
-              {[
-                {
-                  icon: BarChart2,
-                  title: "Aggregate Insights",
-                  description: "View trends without identifying individuals",
-                },
-                {
-                  icon: Shield,
-                  title: "Privacy-First Design",
-                  description: "Strong protections for personal data",
-                },
-                {
-                  icon: Users,
-                  title: "Expert Resources",
-                  description: "Connect members with professional support",
-                },
-              ].map((feature, i) => (
+              {orgFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
                   className="flex items-start gap-4 p-4 bg-surface rounded-2xl"
@@ -83,19 +92,19 @@ export default function OrganizationsSection() {
               {/* Dashboard header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h4 className="font-semibold text-textMain">Organization Dashboard</h4>
-                  <p className="text-sm text-textMuted">Anonymous aggregated view</p>
+                  <h4 className="font-semibold text-textMain">{t.landing.orgsDashboardTitle}</h4>
+                  <p className="text-sm text-textMuted">{t.landing.orgsDashboardSubtitle}</p>
                 </div>
                 <div className="px-3 py-1 bg-primary/10 rounded-full text-xs font-medium text-primary">
-                  Privacy Protected
+                  {t.landing.orgsPrivacyBadge}
                 </div>
               </div>
 
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {[
-                  { label: 'Participation', value: '67%', change: '+12%' },
-                  { label: 'Avg Mood', value: '6.4', change: '+0.3' },
+                  { label: t.landing.orgsParticipation, value: '67%', change: '+12%' },
+                  { label: t.landing.orgsAvgMood, value: '6.4', change: '+0.3' },
                 ].map((stat, i) => (
                   <div key={i} className="bg-surfaceMuted rounded-xl p-4">
                     <div className="text-2xl font-semibold text-textMain">{stat.value}</div>
@@ -109,7 +118,7 @@ export default function OrganizationsSection() {
 
               {/* Mini chart */}
               <div className="bg-surfaceMuted rounded-xl p-4 mb-4">
-                <div className="text-sm font-medium text-textMain mb-3">Weekly Check-in Trend</div>
+                <div className="text-sm font-medium text-textMain mb-3">{t.landing.orgsTrendTitle}</div>
                 <div className="flex items-end gap-2 h-16">
                   {[65, 68, 72, 70, 75, 78, 74].map((h, i) => (
                     <div
@@ -127,13 +136,9 @@ export default function OrganizationsSection() {
 
               {/* Topics */}
               <div>
-                <div className="text-sm font-medium text-textMain mb-3">Common Topics</div>
+                <div className="text-sm font-medium text-textMain mb-3">{t.landing.orgsTopicsTitle}</div>
                 <div className="space-y-2">
-                  {[
-                    { topic: 'Academic Pressure', count: 156 },
-                    { topic: 'Work-Life Balance', count: 134 },
-                    { topic: 'Social Relationships', count: 98 },
-                  ].map((item, i) => (
+                  {topics.map((item, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <span className="text-sm text-textMuted">{item.topic}</span>
                       <span className="text-sm text-textMuted">{item.count}</span>
@@ -149,7 +154,7 @@ export default function OrganizationsSection() {
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              100% Anonymous
+              {t.landing.orgsAnonymousBadge}
             </motion.div>
           </motion.div>
         </div>

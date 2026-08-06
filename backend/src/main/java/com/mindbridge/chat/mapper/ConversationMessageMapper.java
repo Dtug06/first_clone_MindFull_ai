@@ -20,13 +20,19 @@ public class ConversationMessageMapper {
      * pipeline status updates are handled by a separate process (G2-T04).
      */
     public ChatMessageResponse toResponse(ConversationMessage entity) {
+        return toResponse(entity, AnalysisStatus.NOT_REQUESTED);
+    }
+
+    public ChatMessageResponse toResponse(
+            ConversationMessage entity,
+            AnalysisStatus analysisStatus) {
         return new ChatMessageResponse(
                 entity.getId(),
                 entity.getSessionId(),
                 MessageRole.valueOf(entity.getRole().name()),
                 entity.getContent(),
                 entity.getCreatedAt(),
-                AnalysisStatus.NOT_REQUESTED
+                analysisStatus
         );
     }
 }

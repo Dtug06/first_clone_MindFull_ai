@@ -7,6 +7,7 @@ import com.mindbridge.behavior.feature.engagement.config.EngagementConfig;
 import com.mindbridge.behavior.feature.engagement.dto.EngagementAndTopicsResult;
 import com.mindbridge.behavior.feature.profile.DataQualityStatus;
 import com.mindbridge.behavior.feature.profile.config.DataQualityConfig;
+import com.mindbridge.behavior.feature.profile.config.DataQualityConfigProperties;
 import com.mindbridge.behavior.feature.profile.config.TrendConfigProperties;
 import com.mindbridge.behavior.feature.profile.dto.ProfileSnapshot;
 import com.mindbridge.behavior.feature.trend.TrendCalculator;
@@ -40,6 +41,7 @@ public class UserBehaviorProfileAggregationServiceImpl
     private final RiskStateHistoryRepository riskStateHistoryRepository;
     private final ObjectMapper objectMapper;
     private final TrendConfigProperties trendConfigProperties;
+    private final DataQualityConfigProperties dataQualityConfigProperties;
 
     public UserBehaviorProfileAggregationServiceImpl(
             WindowAggregationService windowAggregationService,
@@ -47,18 +49,20 @@ public class UserBehaviorProfileAggregationServiceImpl
             EngagementAndTopicsService engagementAndTopicsService,
             RiskStateHistoryRepository riskStateHistoryRepository,
             ObjectMapper objectMapper,
-            TrendConfigProperties trendConfigProperties) {
+            TrendConfigProperties trendConfigProperties,
+            DataQualityConfigProperties dataQualityConfigProperties) {
         this.windowAggregationService = windowAggregationService;
         this.trendCalculator = trendCalculator;
         this.engagementAndTopicsService = engagementAndTopicsService;
         this.riskStateHistoryRepository = riskStateHistoryRepository;
         this.objectMapper = objectMapper;
         this.trendConfigProperties = trendConfigProperties;
+        this.dataQualityConfigProperties = dataQualityConfigProperties;
     }
 
     @Override
     public ProfileSnapshot aggregateForUser(UUID userId, LocalDate targetDate) {
-        return aggregateForUser(userId, targetDate, DataQualityConfig.defaults());
+        return aggregateForUser(userId, targetDate, dataQualityConfigProperties.toConfig());
     }
 
     /**

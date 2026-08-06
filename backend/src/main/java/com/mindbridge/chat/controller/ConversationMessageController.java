@@ -1,8 +1,10 @@
 package com.mindbridge.chat.controller;
 
 import com.mindbridge.chat.dto.ChatMessageResponse;
+import com.mindbridge.chat.dto.ChatTurnResponse;
 import com.mindbridge.chat.dto.SendMessageRequest;
 import com.mindbridge.chat.service.ConversationMessageService;
+import com.mindbridge.chat.service.ConversationTurnService;
 import com.mindbridge.common.dto.PageResponse;
 import com.mindbridge.idempotency.service.IdempotencyService;
 import com.mindbridge.idempotency.service.IdempotencyService.IdempotencyResult;
@@ -37,12 +39,15 @@ public class ConversationMessageController {
     static final String ENDPOINT = "POST:/chat/sessions/{sessionId}/messages";
 
     private final ConversationMessageService messageService;
+    private final ConversationTurnService turnService;
     private final IdempotencyService idempotencyService;
 
     public ConversationMessageController(
             ConversationMessageService messageService,
+            ConversationTurnService turnService,
             IdempotencyService idempotencyService) {
         this.messageService = messageService;
+        this.turnService = turnService;
         this.idempotencyService = idempotencyService;
     }
 
@@ -53,7 +58,7 @@ public class ConversationMessageController {
      * @param idempotencyKey optional client-supplied key for retry-safe double-click
      */
     @PostMapping
-    public ResponseEntity<ChatMessageResponse> sendMessage(
+    public ResponseEntity<ChatTurnResponse> sendMessage(
             @PathVariable UUID sessionId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody SendMessageRequest request) {
@@ -65,13 +70,13 @@ public class ConversationMessageController {
         // supplier at all).
         UUID userId = messageService.getCurrentUserId();
 
-        IdempotencyResult<ChatMessageResponse> result = idempotencyService.executeWithIdempotency(
+        IdempotencyResult<ChatTurnResponse> result = idempotencyService.executeWithIdempotency(
                 userId,
                 ENDPOINT,
                 idempotencyKey,
-                ChatMessageResponse.class,
+                ChatTurnResponse.class,
                 () -> IdempotencyService.result(
-                        messageService.sendMessage(sessionId, request.content()),
+                        turnService.sendTurn(sessionId, request.content()),
                         HttpStatus.CREATED));
 
         return ResponseEntity.status(result.status()).body(result.body());

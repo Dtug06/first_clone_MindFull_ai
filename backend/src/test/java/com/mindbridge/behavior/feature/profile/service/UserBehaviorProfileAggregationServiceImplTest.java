@@ -1,7 +1,6 @@
 package com.mindbridge.behavior.feature.profile.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -12,6 +11,7 @@ import com.mindbridge.behavior.feature.engagement.dto.EngagementAndTopicsResult;
 import com.mindbridge.behavior.feature.engagement.dto.TopicFrequency;
 import com.mindbridge.behavior.feature.profile.DataQualityStatus;
 import com.mindbridge.behavior.feature.profile.config.DataQualityConfig;
+import com.mindbridge.behavior.feature.profile.config.DataQualityConfigProperties;
 import com.mindbridge.behavior.feature.profile.config.TrendConfigProperties;
 import com.mindbridge.behavior.feature.profile.dto.ProfileSnapshot;
 import com.mindbridge.behavior.feature.trend.TrendCalculator;
@@ -76,7 +76,11 @@ class UserBehaviorProfileAggregationServiceImplTest {
                 engagementService,
                 riskStateHistoryRepository,
                 objectMapper,
-                trendConfigProperties);
+                trendConfigProperties,
+                new DataQualityConfigProperties(
+                        new BigDecimal("0.20"),
+                        new BigDecimal("0.50"),
+                        new BigDecimal("0.30")));
     }
 
     @Test
@@ -272,7 +276,7 @@ class UserBehaviorProfileAggregationServiceImplTest {
     }
 
     @Test
-    @DisplayName("no-arg overload uses defaults (fail-fast NPE if thresholds not configured)")
+    @DisplayName("no-arg overload uses externally configured data-quality thresholds")
     void noArgOverload_usesDefaults() {
         WindowAggregationResult window = mockWindowWithCoverage(
                 new BigDecimal("0.6"), new BigDecimal("0.6"));
@@ -287,9 +291,9 @@ class UserBehaviorProfileAggregationServiceImplTest {
         when(riskStateHistoryRepository.findFirstByUserIdOrderByOccurredAtDescIdDesc(userId))
                 .thenReturn(Optional.empty());
 
-        // defaults() has all null thresholds -> NPE on evaluate()
-        assertThatThrownBy(() -> service.aggregateForUser(userId, targetDate))
-                .isInstanceOf(NullPointerException.class);
+        ProfileSnapshot snapshot = service.aggregateForUser(userId, targetDate);
+
+        assertThat(snapshot.dataQualityStatus()).isEqualTo(DataQualityStatus.SUFFICIENT);
     }
 
     private WindowAggregationResult mockWindow(BigDecimal score7d, BigDecimal score30d,

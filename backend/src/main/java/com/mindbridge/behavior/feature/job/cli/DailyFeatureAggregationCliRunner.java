@@ -23,11 +23,12 @@ public class DailyFeatureAggregationCliRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (args.length == 0) {
-            log.warn("No CLI arguments provided. Use --target=ALL:YYYY-MM-DD or USER:<uuid>:YYYY-MM-DD:YYYY-MM-DD");
-            return;
+        String raw = props.target();
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Feature aggregation target is required: ALL:YYYY-MM-DD "
+                            + "or USER:<uuid>:YYYY-MM-DD:YYYY-MM-DD");
         }
-        String raw = args[0].replaceFirst("^--target=", "");
         DailyFeatureAggregationCliTarget target = DailyFeatureAggregationCliTargetParser.parse(raw);
         if (!target.isValid()) {
             throw new IllegalArgumentException("Invalid CLI target: " + raw);

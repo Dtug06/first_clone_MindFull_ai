@@ -12,9 +12,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * <p>Profile-aware defaults:
  * <ul>
  *   <li><strong>local</strong>: Vite dev server at {@code http://localhost:5173}.</li>
- *   <li><strong>prod</strong>: read from {@code MIND_BRIDGE_CORS_ORIGINS} (comma-separated).
+ *   <li><strong>prod</strong>: read from {@code APP_CORS_ALLOWED_ORIGINS} (comma-separated).
  *       Empty list = no cross-origin allowed (intentional fail-safe).</li>
- *   <li><strong>test</strong>: no addition here; tests do not exercise CORS.</li>
+ *   <li><strong>test</strong>: Vite dev server at {@code http://localhost:5173} by default.</li>
  * </ul>
  *
  * <p>Wildcard origin is NEVER used in production. With credentials enabled,
@@ -35,10 +35,16 @@ public class CorsConfig implements WebMvcConfigurer {
         if (allowedOrigins.isEmpty()) {
             return;
         }
-        registry.addMapping("/api/**")
+        // The servlet context path (/api/v1) is stripped before Spring MVC
+        // evaluates this mapping, so controller paths start at /auth, /users, etc.
+        registry.addMapping("/**")
                 .allowedOrigins(allowedOrigins.toArray(new String[0]))
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "X-Request-Id")
+                .allowedMethods("GET", "POST", "OPTIONS")
+                .allowedHeaders(
+                        "Authorization",
+                        "Content-Type",
+                        "X-Request-Id",
+                        "Idempotency-Key")
                 .exposedHeaders("X-Request-Id")
                 .allowCredentials(true)
                 .maxAge(3600);

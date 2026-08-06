@@ -33,6 +33,19 @@ export interface ChatMessageResponse {
   analysisStatus: AnalysisStatus;
 }
 
+export type ChatReplyStatus =
+  | 'SUCCEEDED'
+  | 'CONSENT_REQUIRED'
+  | 'SAFETY_UNAVAILABLE'
+  | 'SAFETY_TEMPLATE_MISSING'
+  | 'PROVIDER_UNAVAILABLE';
+
+/** Backward-compatible turn response: top-level fields are the stored USER message. */
+export interface ChatTurnResponse extends ChatMessageResponse {
+  assistantMessage: ChatMessageResponse | null;
+  replyStatus: ChatReplyStatus;
+}
+
 export interface ChatSessionPageResponse {
   items: ChatSessionResponse[];
   page: number;
@@ -85,12 +98,12 @@ export class ChatApi {
     sessionId: string,
     payload: SendMessageRequest,
     idempotencyKey?: string,
-  ): Promise<ChatMessageResponse> {
+  ): Promise<ChatTurnResponse> {
     const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
-    return this.client.request<ChatMessageResponse>(
+    return this.client.request<ChatTurnResponse>(
       `/chat/sessions/${sessionId}/messages`,
       { method: 'POST', body: payload, headers },
     );

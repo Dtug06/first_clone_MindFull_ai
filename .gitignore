@@ -10,11 +10,15 @@
 .env
 .env.*
 !.env.example
+# Local API smoke-test responses and authorization headers.
+*_login.json
+auth_hdr.txt
 
 # ------------------- Backend (Java / Maven) ------------------
 # backend/ will be generated in G1-T02. Patterns below prepare
 # for Spring Boot so that future commits don't accidentally
 # track build output or local configs.
+*.class
 backend/target/
 backend/.idea/
 backend/*.iml

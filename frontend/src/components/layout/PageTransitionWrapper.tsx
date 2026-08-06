@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 
 interface PageTransitionWrapperProps {
   children: ReactNode;
+  fullHeight?: boolean;
 }
 
 const pageVariants = {
@@ -26,7 +27,7 @@ const pageTransition = {
   duration: 0.4,
 };
 
-export default function PageTransitionWrapper({ children }: PageTransitionWrapperProps) {
+export default function PageTransitionWrapper({ children, fullHeight = false }: PageTransitionWrapperProps) {
   return (
     <motion.div
       initial="initial"
@@ -34,7 +35,7 @@ export default function PageTransitionWrapper({ children }: PageTransitionWrappe
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="min-h-full"
+      className={fullHeight ? 'h-full flex flex-col' : 'min-h-full'}
     >
       {children}
     </motion.div>

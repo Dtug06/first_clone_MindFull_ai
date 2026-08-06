@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import SafetyBadge from '../../components/ui/SafetyBadge';
 import { Phone, MessageCircle, AlertTriangle } from 'lucide-react';
 
@@ -137,12 +138,12 @@ export default function EmergencySupport() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <a
-            href="/app"
+          <Link
+            to="/app"
             className="inline-flex items-center gap-2 text-primary font-medium"
           >
             Return to MindBridge AI
-          </a>
+          </Link>
         </motion.div>
 
         {/* Safety note */}

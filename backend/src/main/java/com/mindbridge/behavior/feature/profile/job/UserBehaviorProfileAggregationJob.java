@@ -1,6 +1,8 @@
 package com.mindbridge.behavior.feature.profile.job;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,15 +27,18 @@ public class UserBehaviorProfileAggregationJob {
             LoggerFactory.getLogger(UserBehaviorProfileAggregationJob.class);
 
     private final UserBehaviorProfileAggregationJobService service;
+    private final Clock clock;
 
     public UserBehaviorProfileAggregationJob(
-            UserBehaviorProfileAggregationJobService service) {
+            UserBehaviorProfileAggregationJobService service,
+            Clock clock) {
         this.service = service;
+        this.clock = clock;
     }
 
     @Scheduled(cron = "${mindbridge.profile-aggregation.schedule-cron:0 15 3 * * *}")
     public void runDailyAggregation() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(clock.withZone(ZoneOffset.UTC)).minusDays(1);
         log.info("G4-T09 scheduled job starting for date={}", yesterday);
         try {
             int attempted = service.aggregateAllForDate(yesterday);

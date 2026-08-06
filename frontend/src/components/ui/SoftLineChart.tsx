@@ -4,15 +4,27 @@ interface SoftLineChartProps {
   data: { day: string; score: number }[];
   height?: number;
   color?: string;
+  /**
+   * When true, the chart doubles its height on lg+ screens while keeping
+   * the original (mobile) size on smaller breakpoints.
+   * The mobile height is whatever `height` is passed in (or the default 220).
+   */
+  responsive?: boolean;
+  /**
+   * Optional override for day labels rendered under each point. When provided,
+   * `data[i].day` is replaced by `dayLabels[i]` in the SVG. Useful for i18n.
+   */
+  dayLabels?: string[];
 }
-
-export default function SoftLineChart({ 
-  data, 
+export default function SoftLineChart({
+  data,
   height = 220,
-  color = '#5F9E97'
+  color = '#5F9E97',
+  responsive = false,
+  dayLabels,
 }: SoftLineChartProps) {
-  const maxScore = Math.max(...data.map(d => d.score));
-  const minScore = Math.min(...data.map(d => d.score));
+  const maxScore = Math.max(...data.map((d) => d.score));
+  const minScore = Math.min(...data.map((d) => d.score));
   const range = maxScore - minScore || 1;
   const paddedMin = Math.max(0, minScore - range * 0.3);
   const paddedMax = maxScore + range * 0.3;
@@ -38,8 +50,19 @@ export default function SoftLineChart({
 
   const areaD = `${pathD} L ${padding.left + chartWidth} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
 
+  // For responsive mode, we use a CSS custom property so the height can scale
+  // on lg+ screens without requiring Tailwind to know the dynamic value.
+  // The @media rule lives in index.css and reads --chart-height.
+  const style = responsive
+    ? ({
+        ['--chart-height-mobile' as string]: `${height}px`,
+        ['--chart-height-desktop' as string]: `${height * 2}px`,
+        height: 'var(--chart-height-mobile)',
+      } as React.CSSProperties)
+    : ({ height } as React.CSSProperties);
+
   return (
-    <div className="w-full" style={{ height }}>
+    <div className="w-full" style={style}>
       <svg
         viewBox="0 0 100 100"
         className="w-full h-full"
@@ -105,7 +128,7 @@ export default function SoftLineChart({
               fontWeight: 500,
             }}
           >
-            {d.day}
+            {dayLabels?.[i] ?? d.day}
           </text>
         ))}
       </svg>

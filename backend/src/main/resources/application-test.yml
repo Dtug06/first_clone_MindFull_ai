@@ -52,6 +52,11 @@ logging:
 
 # G4-T05: feature aggregation job config for tests
 mindbridge:
+  # The isolated H2 runtime does not execute PostgreSQL Flyway V6, so provide
+  # the same approved MVP catalog for manual frontend/backend smoke testing.
+  # Production/local PostgreSQL profiles continue to use Flyway as source of truth.
+  daily-question:
+    bootstrap-approved-templates: ${MINDBRIDGE_DAILY_QUESTION_BOOTSTRAP_APPROVED_TEMPLATES:true}
   feature-aggregation:
     enabled: true
     batch-size: 10
@@ -61,3 +66,11 @@ mindbridge:
     min-trend-coverage: 0.5
     trend-delta-threshold: 0.1
     high-stress-threshold: 0.75
+  # DEMO_ONLY test fixtures. These are not production or clinical defaults.
+  data-quality:
+    min-coverage-for-low: 0.20
+    min-coverage-for-sufficient: 0.50
+    min-confidence: 0.30
+  # Allow the local Vite frontend during isolated H2 smoke testing.
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}

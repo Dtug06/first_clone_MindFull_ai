@@ -119,6 +119,27 @@ public class ConversationMessage {
         return createUserMessage(sessionId, userId, content, false);
     }
 
+    /**
+     * Factory for a generated or approved-template assistant response.
+     * The caller must pass content that is already safe for display; raw
+     * provider payloads are never persisted through this method.
+     */
+    public static ConversationMessage createAssistantMessage(
+            UUID sessionId, UUID userId, String content) {
+        if (sessionId == null || userId == null) {
+            throw new IllegalArgumentException("sessionId and userId must not be null");
+        }
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("assistant content must not be blank");
+        }
+        if (content.length() > 10_000) {
+            throw new IllegalArgumentException("assistant content exceeds maximum length of 10000");
+        }
+        Instant now = Instant.now();
+        return new ConversationMessage(
+                sessionId, userId, MessageRole.ASSISTANT, content.trim(), false, now, now);
+    }
+
     // --- Getters ---
 
     public UUID getId() {

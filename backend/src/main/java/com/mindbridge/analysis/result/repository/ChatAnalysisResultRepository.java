@@ -52,6 +52,11 @@ public interface ChatAnalysisResultRepository extends JpaRepository<ChatAnalysis
      */
     List<ChatAnalysisResult> findByConversationMessageIdOrderByCreatedAtDesc(UUID conversationMessageId);
 
+    /** Batch read used when rendering a page of chat messages. */
+    List<ChatAnalysisResult> findByConversationMessageIdInAndAnalysisStatus(
+            List<UUID> conversationMessageIds,
+            ResultAnalysisStatus analysisStatus);
+
     /**
      * All results for a given user in a time window, most-recent first.
      * Backed by {@code chat_analysis_results_user_created_desc} index.

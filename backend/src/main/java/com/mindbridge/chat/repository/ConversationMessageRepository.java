@@ -1,6 +1,7 @@
 package com.mindbridge.chat.repository;
 
 import com.mindbridge.chat.domain.ConversationMessage;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,4 +23,7 @@ public interface ConversationMessageRepository extends JpaRepository<Conversatio
      * Used for both pagination and history display.
      */
     Page<ConversationMessage> findBySessionIdOrderByCreatedAtAsc(UUID sessionId, Pageable pageable);
+
+    /** Latest context window for conversational response generation. */
+    List<ConversationMessage> findTop20BySessionIdOrderByCreatedAtDesc(UUID sessionId);
 }

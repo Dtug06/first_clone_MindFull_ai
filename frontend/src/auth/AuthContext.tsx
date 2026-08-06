@@ -5,6 +5,7 @@ import { ConsentsApi } from '../api/consents';
 import { ChatApi } from '../api/chat';
 import { DailyQuestionApi } from '../api/dailyquestion';
 import { ExpertReviewApi } from '../api/expertReview';
+import { BehaviorApi } from '../api/behavior';
 
 const STORAGE_KEY = 'mb:auth';
 const FALLBACK_BASE_URL = '/api/v1';
@@ -25,6 +26,7 @@ export interface AuthContextValue {
   chatApi: ChatApi;
   dailyQuestionApi: DailyQuestionApi;
   expertReviewApi: ExpertReviewApi;
+  behaviorApi: BehaviorApi;
   login(payload: LoginRequest): Promise<void>;
   register(payload: RegisterRequest): Promise<void>;
   logout(): void;
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const chatApi = useMemo(() => new ChatApi(api), [api]);
   const dailyQuestionApi = useMemo(() => new DailyQuestionApi(api), [api]);
   const expertReviewApi = useMemo(() => new ExpertReviewApi(api), [api]);
+  const behaviorApi = useMemo(() => new BehaviorApi(api), [api]);
 
   const login = useCallback(async (payload: LoginRequest) => {
     setLoading(true);
@@ -160,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     chatApi,
     dailyQuestionApi,
     expertReviewApi,
+    behaviorApi,
     login,
     register,
     logout,
