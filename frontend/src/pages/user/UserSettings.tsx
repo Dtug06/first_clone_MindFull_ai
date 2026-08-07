@@ -6,11 +6,12 @@ import { useLanguage } from '../../i18n';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../auth/AuthContext';
 import type { ConsentType, CurrentConsentResponse } from '../../api/consents';
+import { clearChatSessionId } from '../../lib/accountStorage';
 
 export default function UserSettings() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { logout, consentsApi } = useAuth();
+  const { user, logout, consentsApi } = useAuth();
   const {
     mhafProfile,
     resetMhafProfile,
@@ -90,8 +91,8 @@ export default function UserSettings() {
   };
 
   const handleSignOut = () => {
+    clearChatSessionId(user?.id ?? null);
     logout();
-    window.sessionStorage.removeItem('mb:chat:active-session-id');
     navigate('/auth', { replace: true });
   };
 

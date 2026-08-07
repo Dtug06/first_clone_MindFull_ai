@@ -26,10 +26,9 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # No JPA entities exist yet (those land in T06+), so `validate`
-      # would fail on every empty DB and `none` is the safe choice for
-      # T03. Switch to `validate` once the first entity ships.
-      ddl-auto: none
+      # Flyway owns schema changes; Hibernate only verifies entity/schema
+      # compatibility and fails startup before a mismatched write can occur.
+      ddl-auto: validate
     properties:
       # Enforce UTC at Hibernate layer so any future entity that uses
       # java.time types persists in UTC regardless of host TZ.

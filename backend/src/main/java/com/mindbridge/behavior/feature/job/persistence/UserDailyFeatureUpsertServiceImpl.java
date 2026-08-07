@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.core.env.Environment;
 
 @Service
 public class UserDailyFeatureUpsertServiceImpl implements UserDailyFeatureUpsertService {
@@ -18,10 +19,14 @@ public class UserDailyFeatureUpsertServiceImpl implements UserDailyFeatureUpsert
     @PersistenceContext
     private EntityManager entityManager;
 
-    public UserDailyFeatureUpsertServiceImpl() {
-        String jdbcUrl = System.getProperty("spring.datasource.url");
+    public UserDailyFeatureUpsertServiceImpl(Environment environment) {
+        String jdbcUrl = environment.getProperty("spring.datasource.url");
         this.dialect = DbDialect.fromJdbcUrl(jdbcUrl);
-        log.info("G4-T05 Using dialect={} for datasource.url={}", dialect, jdbcUrl);
+        if (dialect == DbDialect.UNKNOWN) {
+            throw new IllegalStateException(
+                    "Unsupported or missing spring.datasource.url for G4 feature upsert");
+        }
+        log.info("G4-T05 Using database dialect={}", dialect);
     }
 
     @Override
@@ -63,7 +68,7 @@ public class UserDailyFeatureUpsertServiceImpl implements UserDailyFeatureUpsert
                 ":exerciseCompletionRatio, :exerciseCompletionCalculationVersion," +
                 ":maxRiskLevel, :riskEventCount, :maxRiskCalculationVersion," +
                 ":explicitCoverage, :inferredConfidence," +
-                ":featureVersion, :calculationVersion, :extraFeatures, :createdAt" +
+                ":featureVersion, :calculationVersion, CAST(:extraFeatures AS jsonb), :createdAt" +
             ") ON CONFLICT (user_id, feature_date) DO UPDATE SET" +
                 " stress_score = EXCLUDED.stress_score," +
                 " stress_raw_value = EXCLUDED.stress_raw_value," +

@@ -108,7 +108,7 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
                     + ":sleep7d, :sleep30d,"
                     + ":anxiety7d, :anxiety30d,"
                     + ":engagement7d, :engagement30d,"
-                    + ":trendSummary, :topics7d, :topics30d,"
+                    + ":trendSummary, CAST(:topics7d AS jsonb), CAST(:topics30d AS jsonb),"
                     + ":riskLevel, :riskHistoryId,"
                     + ":dataCoverage, :confidence, :dataQualityStatus,"
                     + ":profileVersion, :calculationVersion,"

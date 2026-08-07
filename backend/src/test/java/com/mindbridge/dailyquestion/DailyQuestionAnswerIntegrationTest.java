@@ -50,6 +50,7 @@ import org.springframework.test.web.servlet.MvcResult;
         "classpath:schema-daily-question.sql",
         "classpath:schema-daily-question-assignments.sql",
         "classpath:schema-daily-question-answers.sql",
+        "classpath:schema-behavioral-events.sql",
         "classpath:schema-idempotency-keys.sql"
 })
 @DisplayName("Daily question answer integration")

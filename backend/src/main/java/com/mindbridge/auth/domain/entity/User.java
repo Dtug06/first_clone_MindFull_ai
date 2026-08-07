@@ -27,7 +27,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true, nullable = false)
+    // PostgreSQL CITEXT keeps both uniqueness and lookup case-insensitive.
+    // Declaring the real database type also lets Hibernate `validate` compare
+    // this entity with the Flyway-owned schema correctly.
+    @Column(unique = true, nullable = false, columnDefinition = "citext")
     private String email;
 
     @Column(name = "password_hash", nullable = false)
