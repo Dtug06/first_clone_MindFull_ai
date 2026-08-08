@@ -152,6 +152,28 @@ public class User {
         this.timezone = timezone;
     }
 
+    /**
+     * Package-private setter for test support. Allows tests to backdate
+     * createdAt so that daysSinceRegistration calculations produce a
+     * denominator >= 7, keeping explicitCoverage fractions in [0,1].
+     */
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    /**
+     * Test-only factory: creates a user and directly sets createdAt, bypassing
+     * @PrePersist. For integration tests only.
+     */
+    public static User registerForTest(String email, String passwordHash,
+            String displayName, String timezone, Instant createdAt) {
+        User user = register(email, passwordHash, displayName);
+        user.timezone = timezone;
+        // Bypass @PrePersist — direct field write.
+        user.createdAt = createdAt;
+        return user;
+    }
+
     public enum UserRole {
         USER, EXPERT, ADMIN
     }

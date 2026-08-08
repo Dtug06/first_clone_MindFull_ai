@@ -98,9 +98,16 @@ public class TrendCalculatorImpl implements TrendCalculator {
         entries.add(buildEntry("energy", TrendPolarity.HIGHER_IS_BETTER,
                 recent.energyScore7d(), recent.energyCoverage7d(),
                 priorWindow.energyScore7d(), priorWindow.energyCoverage7d(), config));
+        // G4-FIXUP-2026-08-08: sleep_quality template is not yet shipped (T04
+        // sleep_quality_v1 formula is TODO_EXPERT_REVIEW), so `sleep_score`
+        // is always NULL even when `sleep_hours` has data. To avoid a
+        // permanent UNKNOWN trend for sleep, fall back to `sleepHoursAvg*`
+        // (raw user duration average — non-clinical proxy documented as
+        // calculation_version "sleep_hours_v1_proxy"). Switch back to
+        // sleepScore7d once sleep_quality_v1 ships.
         entries.add(buildEntry("sleep", TrendPolarity.HIGHER_IS_BETTER,
-                recent.sleepScore7d(), recent.sleepCoverage7d(),
-                priorWindow.sleepScore7d(), priorWindow.sleepCoverage7d(), config));
+                recent.sleepHoursAvg7d(), recent.sleepCoverage7d(),
+                priorWindow.sleepHoursAvg7d(), priorWindow.sleepCoverage7d(), config));
         entries.add(buildEntry("anxiety_signal", TrendPolarity.HIGHER_IS_WORSE,
                 recent.anxietySignal7d(), recent.anxietyCoverage7d(),
                 priorWindow.anxietySignal7d(), priorWindow.anxietyCoverage7d(), config));

@@ -133,6 +133,26 @@ public class DailyQuestionAssignmentService {
                                                           LocalDate date,
                                                           String timezone) {
         seedGuard.requireSeedAllowed();
+        return getOrCreateAssignmentForSeed(userId, template, date, timezone);
+    }
+
+    /**
+     * Idempotent entry point for seed code. Returns the existing assignment if
+     * one already exists for (user, templateVersion, date); otherwise creates and
+     * saves a new one.  The {@code save()} call is kept inside this method so
+     * the caller does not need to know whether a create or lookup happened.
+     */
+    private DailyQuestionAssignment getOrCreateAssignmentForSeed(UUID userId,
+                                                                 DailyQuestionTemplate template,
+                                                                 LocalDate date,
+                                                                 String timezone) {
+        List<DailyQuestionAssignment> existing = assignmentRepository
+                .findByUserIdAndAssignedForDateOrderByTemplateCodeAsc(userId, date);
+        for (DailyQuestionAssignment a : existing) {
+            if (a.getTemplateVersion().getId().equals(template.getId())) {
+                return a;
+            }
+        }
         DailyQuestionAssignment assignment = DailyQuestionAssignment.create(
                 userId, template, date, timezone);
         return assignmentRepository.save(assignment);

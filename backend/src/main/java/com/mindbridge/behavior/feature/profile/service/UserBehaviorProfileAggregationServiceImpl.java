@@ -109,9 +109,17 @@ public class UserBehaviorProfileAggregationServiceImpl
         BigDecimal coverage7d = nzOrZero(window.explicitCoverage7d());
         BigDecimal coverage30d = nzOrZero(window.explicitCoverage30d());
         BigDecimal dataCoverage = maxOf(coverage7d, coverage30d);
+        // Clamp to [0, 1] - coverage must not exceed 1 even if the denominator
+        // is smaller than the number of seeded days (e.g. user just registered).
+        if (dataCoverage.compareTo(BigDecimal.ONE) > 0) {
+            dataCoverage = BigDecimal.ONE;
+        }
         BigDecimal confidence7d = nzOrZero(window.inferredConfidence7d());
         BigDecimal confidence30d = nzOrZero(window.inferredConfidence30d());
         BigDecimal confidence = maxOf(confidence7d, confidence30d);
+        if (confidence.compareTo(BigDecimal.ONE) > 0) {
+            confidence = BigDecimal.ONE;
+        }
 
         DataQualityStatus dataQualityStatus =
                 dataQualityConfig.evaluate(dataCoverage, confidence);
