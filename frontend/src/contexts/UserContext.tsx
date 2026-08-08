@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode, useCallback } from 'react';
 import type { MhafProfile, DailyCheckIn, UserGoal } from '../types/user';
+import { useAuth } from '../auth/AuthContext';
+import { accountLocalStorageKeys, type AccountLocalStorageKeys } from '../lib/accountStorage';
 
 interface UserContextValue {
   mhafProfile: MhafProfile | null;
@@ -21,12 +23,6 @@ interface UserContextValue {
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
-
-const STORAGE_KEYS = {
-  mhaf: 'mb_mhaf_profile_v1',
-  daily: 'mb_daily_checkins_v1',
-  goals: 'mb_user_goals_v1',
-} as const;
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -52,28 +48,33 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function UserProvider({ children }: { children: ReactNode }) {
+interface AccountScopedUserProviderProps {
+  children: ReactNode;
+  storageKeys: AccountLocalStorageKeys | null;
+}
+
+function AccountScopedUserProvider({ children, storageKeys }: AccountScopedUserProviderProps) {
   const [mhafProfile, setMhafProfile] = useState<MhafProfile | null>(
-    () => readJson<MhafProfile | null>(STORAGE_KEYS.mhaf, null)
+    () => storageKeys ? readJson<MhafProfile | null>(storageKeys.mhaf, null) : null
   );
   const [dailyCheckIns, setDailyCheckIns] = useState<DailyCheckIn[]>(
-    () => readJson<DailyCheckIn[]>(STORAGE_KEYS.daily, [])
+    () => storageKeys ? readJson<DailyCheckIn[]>(storageKeys.daily, []) : []
   );
   const [goals, setGoals] = useState<UserGoal[]>(
-    () => readJson<UserGoal[]>(STORAGE_KEYS.goals, [])
+    () => storageKeys ? readJson<UserGoal[]>(storageKeys.goals, []) : []
   );
 
   useEffect(() => {
-    writeJson(STORAGE_KEYS.mhaf, mhafProfile);
-  }, [mhafProfile]);
+    if (storageKeys) writeJson(storageKeys.mhaf, mhafProfile);
+  }, [mhafProfile, storageKeys]);
 
   useEffect(() => {
-    writeJson(STORAGE_KEYS.daily, dailyCheckIns);
-  }, [dailyCheckIns]);
+    if (storageKeys) writeJson(storageKeys.daily, dailyCheckIns);
+  }, [dailyCheckIns, storageKeys]);
 
   useEffect(() => {
-    writeJson(STORAGE_KEYS.goals, goals);
-  }, [goals]);
+    if (storageKeys) writeJson(storageKeys.goals, goals);
+  }, [goals, storageKeys]);
 
   const saveMhafProfile = useCallback((profile: Omit<MhafProfile, 'completed_at'>) => {
     setMhafProfile({ ...profile, completed_at: new Date().toISOString() });
@@ -144,6 +145,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+}
+
+export function UserProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const storageKeys = useMemo(() => accountLocalStorageKeys(userId), [userId]);
+
+  // Remount on account changes so in-memory health data from the previous
+  // principal cannot be persisted under or displayed to the next principal.
+  return (
+    <AccountScopedUserProvider key={userId ?? 'signed-out'} storageKeys={storageKeys}>
+      {children}
+    </AccountScopedUserProvider>
+  );
 }
 
 export function useUser(): UserContextValue {

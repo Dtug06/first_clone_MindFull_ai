@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "user_behavior_profiles")
@@ -67,9 +69,11 @@ public class UserBehaviorProfile {
     @Column(name = "trend_summary", columnDefinition = "TEXT")
     private String trendSummary;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "dominant_topics_7d", columnDefinition = "jsonb", nullable = false)
     private String dominantTopics7d;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "dominant_topics_30d", columnDefinition = "jsonb", nullable = false)
     private String dominantTopics30d;
 

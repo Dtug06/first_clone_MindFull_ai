@@ -48,6 +48,7 @@ pnpm-debug.log*
 backend/logs/
 
 # ------------------- Tool caches ----------------------------
+.tmp/
 .vite/
 .cache/
 .eslintcache

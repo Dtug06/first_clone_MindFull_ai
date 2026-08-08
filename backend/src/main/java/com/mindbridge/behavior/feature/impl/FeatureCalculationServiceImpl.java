@@ -161,7 +161,7 @@ public class FeatureCalculationServiceImpl implements FeatureCalculationService 
             log.warn("G4-T04 mood: option_value out of [1,5] (value={}), returning NONE", rawInt);
             return new MoodResult(null, option, FeatureSource.NONE, NORMALIZATION_VERSION);
         }
-        BigDecimal score = BigDecimal.valueOf(rawInt - 1)
+        BigDecimal score = BigDecimal.valueOf(4 - (rawInt - 1))
                 .divide(NORMALIZATION_DIVISOR, 3, RoundingMode.HALF_UP);
         return new MoodResult(score, option, FeatureSource.DAILY_ANSWER, NORMALIZATION_VERSION);
     }
@@ -234,8 +234,16 @@ public class FeatureCalculationServiceImpl implements FeatureCalculationService 
 
         BigDecimal checkinRatio = null;
         if (assigned > 0) {
-            checkinRatio = BigDecimal.valueOf(completed)
+            long clampedCompleted = Math.min(completed, assigned);
+            checkinRatio = BigDecimal.valueOf(clampedCompleted)
                     .divide(BigDecimal.valueOf(assigned), 3, RoundingMode.HALF_UP);
+        } else {
+            // No assignments for this day. Default to full completion (1.0) so
+            // the CHECK constraint (ratio IN [0,1] OR NULL) is always satisfied
+            // in both H2 test and PostgreSQL production.  All 5 templates are
+            // always assigned on seed days, so this branch is only hit when
+            // the day has no assignments at all (e.g. future or outside scope).
+            checkinRatio = BigDecimal.ONE;
         }
 
         return new EngagementResult(

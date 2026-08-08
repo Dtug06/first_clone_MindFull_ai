@@ -14,6 +14,7 @@ import com.mindbridge.behavior.feature.profile.entity.UserBehaviorProfile;
 import com.mindbridge.behavior.feature.profile.repository.UserBehaviorProfileRepository;
 import com.mindbridge.behavior.feature.window.repository.UserDailyFeatureWindowRepository;
 import com.mindbridge.auth.repository.UserRepository;
+import com.mindbridge.dailyquestion.repository.DailyQuestionAnswerRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
@@ -34,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileService {
@@ -46,6 +48,7 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
     private DbDialect dialect = DbDialect.UNKNOWN;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final DailyQuestionAnswerRepository dailyQuestionAnswerRepository;
     private final Clock clock;
 
     @Autowired
@@ -59,11 +62,13 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
             UserDailyFeatureWindowRepository windowRepository,
             ObjectMapper objectMapper,
             UserRepository userRepository,
+            DailyQuestionAnswerRepository dailyQuestionAnswerRepository,
             Clock clock) {
         this.repository = repository;
         this.windowRepository = windowRepository;
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
+        this.dailyQuestionAnswerRepository = dailyQuestionAnswerRepository;
         this.clock = clock;
         this.dialect = DbDialect.UNKNOWN;
         log.info("G4-T09 dialect unresolved at construction; will resolve on first upsert");
@@ -108,7 +113,7 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
                     + ":sleep7d, :sleep30d,"
                     + ":anxiety7d, :anxiety30d,"
                     + ":engagement7d, :engagement30d,"
-                    + ":trendSummary, :topics7d, :topics30d,"
+                    + ":trendSummary, CAST(:topics7d AS jsonb), CAST(:topics30d AS jsonb),"
                     + ":riskLevel, :riskHistoryId,"
                     + ":dataCoverage, :confidence, :dataQualityStatus,"
                     + ":profileVersion, :calculationVersion,"
@@ -199,7 +204,7 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
                     + " WHERE id = :id AND user_id = :userId";
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean upsert(ProfileSnapshot snapshot) {
         if (dialect == DbDialect.UNKNOWN) {
             synchronized (this) {
@@ -356,6 +361,12 @@ public class UserBehaviorProfileServiceImpl implements UserBehaviorProfileServic
     @Transactional(readOnly = true)
     public Optional<ProfileSnapshot> findLatestForUser(UUID userId) {
         return repository.findByUserId(userId).map(this::toSnapshot);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasSourceData(UUID userId) {
+        return dailyQuestionAnswerRepository.existsByUserId(userId);
     }
 
     @Override

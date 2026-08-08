@@ -58,6 +58,15 @@ mindbridge:
   seed:
     run: ${MINDBRIDGE_SEED_RUN:false}
     scenario: ${MINDBRIDGE_SEED_SCENARIO:DEFAULT}
+  # --- Seven-day trend dev seed ---
+  # Deterministic 7-day improving-trend seed for one test user.
+  # Disabled by default (enabled=false). Set enabled=true and provide user-email
+  # to activate. See backend/README.md § "Seven-day trend seed" for usage.
+  dev-seed:
+    seven-day-trend:
+      enabled: ${MINDBRIDGE_TREND_SEED_ENABLED:false}
+      user-email: ${MINDBRIDGE_TREND_SEED_USER_EMAIL:}
+      target-date: ${MINDBRIDGE_TREND_SEED_TARGET_DATE:}
   # --- G4-T05: Daily feature aggregation job (scheduler + CLI) ---
   # enabled: master switch for the @Scheduled tick. CI/local default
   # OFF so stock `mvn spring-boot:run` does nothing. Production

@@ -11,16 +11,16 @@ CREATE TABLE chat_analysis_results (
     topic                   VARCHAR(40)   NOT NULL,
     emotion                 VARCHAR(20)   NOT NULL,
     intent                  VARCHAR(20)   NOT NULL,
-    signals                 JSONB         NOT NULL DEFAULT ''[]''::jsonb,
-    evidence_spans          JSONB         NOT NULL DEFAULT ''[]''::jsonb,
+    signals                 JSONB         NOT NULL DEFAULT '[]'::jsonb,
+    evidence_spans          JSONB         NOT NULL DEFAULT '[]'::jsonb,
     model_risk_level        SMALLINT      NOT NULL,
     confidence              NUMERIC(4,3)  NOT NULL,
-    analysis_status         VARCHAR(20)   NOT NULL DEFAULT ''ACTIVE'',
+    analysis_status         VARCHAR(20)   NOT NULL DEFAULT 'ACTIVE',
     supersedes_id           UUID,
     created_at              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chat_analysis_results_status_chk
-        CHECK (analysis_status IN (''ACTIVE'', ''SUPERSEDED'', ''INVALIDATED'')),
+        CHECK (analysis_status IN ('ACTIVE', 'SUPERSEDED', 'INVALIDATED')),
     CONSTRAINT chat_analysis_results_model_risk_level_chk
         CHECK (model_risk_level BETWEEN 1 AND 4),
     CONSTRAINT chat_analysis_results_confidence_chk
@@ -35,7 +35,7 @@ CREATE TABLE chat_analysis_results (
 
 CREATE INDEX chat_analysis_results_message_active_created_desc
     ON chat_analysis_results (conversation_message_id, created_at DESC)
-    WHERE analysis_status = ''ACTIVE'';
+    WHERE analysis_status = 'ACTIVE';
 
 CREATE INDEX chat_analysis_results_user_created_desc
     ON chat_analysis_results (user_id, created_at DESC);
@@ -47,18 +47,18 @@ CREATE INDEX chat_analysis_results_supersedes_idx
 CREATE OR REPLACE FUNCTION chat_analysis_results_one_active_per_message()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (TG_OP = ''UPDATE'' AND OLD.analysis_status = ''ACTIVE'' AND NEW.analysis_status = ''ACTIVE'') THEN
+    IF (TG_OP = 'UPDATE' AND OLD.analysis_status = 'ACTIVE' AND NEW.analysis_status = 'ACTIVE') THEN
         RETURN NEW;
     END IF;
 
-    IF (NEW.analysis_status = ''ACTIVE'') THEN
+    IF (NEW.analysis_status = 'ACTIVE') THEN
         IF EXISTS (
             SELECT 1 FROM chat_analysis_results
             WHERE conversation_message_id = NEW.conversation_message_id
-              AND analysis_status = ''ACTIVE''
+              AND analysis_status = 'ACTIVE'
               AND id <> NEW.id
         ) THEN
-            RAISE EXCEPTION ''Only one ACTIVE row allowed per conversation_message_id (existing ACTIVE row conflicts with %)'', NEW.id;
+            RAISE EXCEPTION 'Only one ACTIVE row allowed per conversation_message_id (existing ACTIVE row conflicts with %)', NEW.id;
         END IF;
     END IF;
 
@@ -84,11 +84,11 @@ BEGIN
     FROM chat_analysis_results WHERE id = NEW.supersedes_id;
 
     IF parent_status IS NULL THEN
-        RAISE EXCEPTION ''supersedes_id % does not exist in chat_analysis_results'', NEW.supersedes_id;
+        RAISE EXCEPTION 'supersedes_id % does not exist in chat_analysis_results', NEW.supersedes_id;
     END IF;
 
-    IF parent_status = ''ACTIVE'' THEN
-        RAISE EXCEPTION ''supersedes_id % must reference a SUPERSEDED or INVALIDATED row (current status=ACTIVE)'', NEW.supersedes_id;
+    IF parent_status = 'ACTIVE' THEN
+        RAISE EXCEPTION 'supersedes_id % must reference a SUPERSEDED or INVALIDATED row (current status=ACTIVE)', NEW.supersedes_id;
     END IF;
 
     RETURN NEW;

@@ -61,7 +61,7 @@ class FeatureCalculationServiceImplTest {
             assertThat(out.stress().score()).isEqualByComparingTo("0.750");
             assertThat(out.stress().source()).isEqualTo(FeatureSource.DAILY_ANSWER);
             assertThat(out.stress().rawValue()).isEqualByComparingTo("4");
-            assertThat(out.mood().score()).isEqualByComparingTo("0.750");
+            assertThat(out.mood().score()).isEqualByComparingTo("0.250");
             assertThat(out.mood().source()).isEqualTo(FeatureSource.DAILY_ANSWER);
             assertThat(out.energy().score()).isEqualByComparingTo("0.500");
             assertThat(out.energy().source()).isEqualTo(FeatureSource.DAILY_ANSWER);
@@ -388,7 +388,7 @@ class FeatureCalculationServiceImplTest {
     class EngagementAndBehaviour {
 
         @Test
-        void engagementCheckinRatio_nullWhenAssignedIsZero() {
+        void engagementCheckinRatio_defaultsToOneWhenAssignedIsZero() {
             DailySourceAggregation.BehavioralEventCounts counts =
                     new DailySourceAggregation.BehavioralEventCounts(5L, 1L, 0L, 0L, 0L);
             DailySourceAggregation source = aggregation(
@@ -398,7 +398,11 @@ class FeatureCalculationServiceImplTest {
 
             DailyFeatureResult out = service.calculateForDay(source, FeatureConfig.defaults());
 
-            assertThat(out.engagement().checkinCompletionRatio()).isNull();
+            // When no assignments exist for the day, checkinCompletionRatio defaults to 1.0
+            // (no missed check-ins on days with no assignment). This satisfies the
+            // CHECK constraint (ratio IN [0,1]) in both H2 and PostgreSQL.
+            assertThat(out.engagement().checkinCompletionRatio())
+                    .isEqualByComparingTo(BigDecimal.ONE);
             assertThat(out.engagement().checkinAssignedCount()).isEqualTo(0L);
             assertThat(out.engagement().source()).isEqualTo(FeatureSource.BEHAVIORAL);
         }

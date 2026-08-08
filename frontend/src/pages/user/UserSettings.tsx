@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trash2, AlertTriangle, RefreshCw, Plus, Target, LogOut } from 'lucide-react';
+import { Trash2, AlertTriangle, RefreshCw, Plus, Target, LogOut, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../../i18n';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../auth/AuthContext';
+import type { ConsentType, CurrentConsentResponse } from '../../api/consents';
+import { clearChatSessionId } from '../../lib/accountStorage';
 
 export default function UserSettings() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { user, logout, consentsApi } = useAuth();
   const {
     mhafProfile,
     resetMhafProfile,
@@ -24,6 +26,46 @@ export default function UserSettings() {
   const [goalDeadline, setGoalDeadline] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmRedo, setConfirmRedo] = useState(false);
+  const [consents, setConsents] = useState<CurrentConsentResponse[]>([]);
+  const [consentLoading, setConsentLoading] = useState(true);
+  const [consentUpdating, setConsentUpdating] = useState<ConsentType | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
+
+  const loadConsents = useCallback(async () => {
+    setConsentLoading(true);
+    setConsentError(null);
+    try {
+      setConsents(await consentsApi.current());
+    } catch {
+      setConsentError('Could not load your server-side consent settings.');
+    } finally {
+      setConsentLoading(false);
+    }
+  }, [consentsApi]);
+
+  useEffect(() => {
+    void loadConsents();
+  }, [loadConsents]);
+
+  const isGranted = (type: ConsentType): boolean =>
+    consents.find((item) => item.consentType === type)?.granted ?? false;
+
+  const updateConsent = async (type: ConsentType, granted: boolean) => {
+    setConsentUpdating(type);
+    setConsentError(null);
+    try {
+      await consentsApi.record({
+        consentType: type,
+        action: granted ? 'GRANTED' : 'REVOKED',
+        policyVersion: '1.0',
+      });
+      await loadConsents();
+    } catch {
+      setConsentError('The consent change could not be saved. Please try again.');
+    } finally {
+      setConsentUpdating(null);
+    }
+  };
 
   const handleAddGoal = () => {
     const title = goalTitle.trim();
@@ -49,8 +91,8 @@ export default function UserSettings() {
   };
 
   const handleSignOut = () => {
+    clearChatSessionId(user?.id ?? null);
     logout();
-    window.sessionStorage.removeItem('mb:chat:active-session-id');
     navigate('/auth', { replace: true });
   };
 
@@ -263,12 +305,83 @@ export default function UserSettings() {
           )}
         </motion.section>
 
+        {/* AI data consent */}
+        <motion.section
+          className="bg-surface rounded-3xl p-6 shadow-soft mb-6"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold text-textMain">AI data permissions</h2>
+          </div>
+          <p className="text-sm text-textMuted mb-5">
+            These choices are stored as append-only consent events. Revoking personalization stops
+            new AI replies from receiving your name, typed Daily Check-in values, and G4 trend summary.
+          </p>
+
+          {consentLoading ? (
+            <p className="text-sm text-textMuted">Loading permissions…</p>
+          ) : (
+            <div className="space-y-4">
+              {([
+                {
+                  type: 'CHAT_ANALYSIS' as const,
+                  title: 'Chat analysis and AI replies',
+                  description: 'Allows safety-screened chat messages to be analyzed and sent to the configured AI provider.',
+                },
+                {
+                  type: 'PERSONALIZATION' as const,
+                  title: 'Personalized chat context',
+                  description: 'Allows chat to use your display name, today’s typed Daily Check-in values, and available G4 trends.',
+                },
+              ]).map((item) => {
+                const granted = isGranted(item.type);
+                return (
+                  <div key={item.type} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-surfaceMuted/40 p-4">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-textMain">{item.title}</p>
+                      <p className="text-xs leading-relaxed text-textMuted mt-1">{item.description}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={consentUpdating !== null}
+                      onClick={() => void updateConsent(item.type, !granted)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium disabled:opacity-50 ${
+                        granted
+                          ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                          : 'bg-primary text-white hover:bg-primary/90'
+                      }`}
+                    >
+                      {consentUpdating === item.type
+                        ? 'Saving…'
+                        : granted
+                          ? 'Revoke'
+                          : 'Allow'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {consentError && (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">
+              <span>{consentError}</span>
+              <button type="button" onClick={() => void loadConsents()} className="font-medium underline">
+                Retry
+              </button>
+            </div>
+          )}
+        </motion.section>
+
         {/* Data & Privacy */}
         <motion.section
           className="bg-surface rounded-3xl p-6 shadow-soft"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.25 }}
         >
           <h2 className="font-semibold text-textMain mb-4">{t.user.settingsDataSection}</h2>
 

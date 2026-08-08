@@ -43,10 +43,10 @@ Không ghi một chức năng là `COMPLETED` nếu chưa kiểm tra source, bui
 - Frontend: React
 - AI: Hosted pretrained LLM API
 - Team size: 2 developers
-- Current branch: `develop`
+- Current branch: `codex/integrate-new-frontend-g4`
 - Current release target: `MVP`
-- Last updated: `2026-07-30`
-- Updated by: `TMon283`
+- Last updated: `2026-08-06`
+- Updated by: `Codex verification session`
 - Frozen frontend baseline: tag `v0.0.1-frontend-baseline` → commit `128eece`
 
 ---
@@ -55,37 +55,49 @@ Không ghi một chức năng là `COMPLETED` nếu chưa kiểm tra source, bui
 
 ### Frontend
 
-- Status: UI_PROTOTYPE
-- Location: repository root
-- Source directory: `src/`
+- Status: PARTIAL_REAL_INTEGRATION
+- Location: `frontend/`
+- Source directory: `frontend/src/`
 - Framework: React 18 + TypeScript + Vite
 - Styling: Tailwind CSS
 - Routing: React Router with HashRouter
-- Data source: Mock and placeholder data
-- API integration: NOT_STARTED
-- Authentication: NOT_STARTED
-- Authorization: NOT_STARTED
-- Real AI integration: NOT_STARTED
+- Data source: Mixed; Auth, Consent, Chat, Daily Check-in and Behavior Profile use backend APIs; remaining prototype areas may still use browser-local/mock data
+- API integration: PARTIAL
+- Authentication: IMPLEMENTED
+- Authorization: Backend-enforced for integrated endpoints; complete frontend route lifecycle remains G7 scope
+- Real AI integration: IMPLEMENTED for safety-screened chat when the real provider is configured
 
 ### Backend
 
-- Status: NOT_STARTED
-- Planned location: `backend/`
-- Planned stack: Java 21 + Spring Boot
-- API: NOT_STARTED
-- Tests: NOT_STARTED
+- Status: IMPLEMENTED_THROUGH_G4_IN_REVIEW
+- Location: `backend/`
+- Stack: Java 21 + Spring Boot 3.3.5
+- API: Auth, Consent, Chat, Daily Check-in, Safety, structured chat analysis and G4 Behavior Profile implemented
+- Tests: Targeted G4 personalization regression passed on 2026-08-06; full Maven lifecycle remains affected by the local javac `Cannot close compiler resources` issue
 
 ### Database
 
-- Status: NOT_STARTED
-- Planned database: PostgreSQL
-- Flyway migrations: NOT_STARTED
+- Status: IMPLEMENTED_IN_REVIEW
+- Database: PostgreSQL
+- Flyway migrations: V1 through V25 present; V25 adds deterministic consent event ordering
+- Fresh PostgreSQL verification: NOT_VERIFIED in this session because database credentials were not available to the review process
 
 ### Important Note
 
 Existing frontend pages represent intended UI only.
 
 They do not prove that corresponding business functions are implemented.
+
+### 2026-08-06 G4 Personalized Chat Integration
+
+- Added consent-gated context loading for the authenticated user only.
+- Ordinary AI chat can receive the user's sanitized display name, today's typed Daily Check-in values, and the latest materialized G4 profile/trends.
+- Free-text Daily answers, email, passwords, raw Safety evidence and audit data are excluded from the AI context.
+- Level 3/4 Safety handling remains before personalization and before the conversational AI provider.
+- Added real Settings controls for `CHAT_ANALYSIS` and `PERSONALIZATION` consent; fixed the frontend DTO to match the backend consent contract.
+- Fixed Daily assigned-count aggregation and removed the hard-coded profile timezone.
+- Targeted backend tests: 54/54 PASS, including chat-message integration. Frontend lint: 0 errors (4 existing warnings). Frontend production build: PASS.
+- Behavior profiles remain materialized by the approved G4 aggregation jobs. Production thresholds and scheduler activation still require explicit expert-reviewed environment configuration; the conversational LLM does not invent or calculate clinical thresholds.
 
 ---
 
@@ -1197,7 +1209,7 @@ Sau audit repository, thay `UNKNOWN` bằng trạng thái thực tế.
 | `/api/v1/chat/sessions` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/chat/sessions/{id}/messages` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/daily-checkins/today` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
-| `/api/v1/behavior/profile` | GET | IMPLEMENTED | NOT_CONNECTED | IMPLEMENTED | G4-T09 + G4-T12: full payload incl. nested `trendSummary` (TrendSummaryResponse), `dataQualityStatus`, 7d/30d split + `DominantTopic[]`. Security 401/403 + 404 declared. 1 unit + 4 WebMvc + 28 G4-T09 tests pass. Placeholder thresholds `MIN_TREND_COVERAGE`/`TREND_DELTA_THRESHOLD`/`HIGH_STRESS_THRESHOLD` (`TODO_EXPERT_REVIEW`). Frontend integration = G7. |
+| `/api/v1/behavior/profile` | GET | IMPLEMENTED | CONNECTED | IMPLEMENTED | G4-T09 + G4-T12: full payload incl. nested `trendSummary` (TrendSummaryResponse), `dataQualityStatus`, 7d/30d split + `DominantTopic[]`. G4-T14: a committed Daily Answer triggers T05 + T09 after commit; when source data exists but the profile is missing, this endpoint also aggregates lazily and reloads the real profile. A user with no Daily Answer still receives 404 and no fake profile is created. Dashboard exposes a manual `Refresh now` retry without polling. Security 401/403 + 404 declared. Placeholder thresholds `MIN_TREND_COVERAGE`/`TREND_DELTA_THRESHOLD`/`HIGH_STRESS_THRESHOLD` (`TODO_EXPERT_REVIEW`). |
 | `/api/v1/matching/run` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/user-programs` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 

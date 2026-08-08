@@ -58,6 +58,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @ActiveProfiles("test")
 @Sql(scripts = {
         "classpath:schema-users.sql",
+        "classpath:schema-consent.sql",
         "classpath:schema-chat-sessions.sql",
         "classpath:schema-conversation-messages.sql",
         "classpath:schema-daily-question.sql",

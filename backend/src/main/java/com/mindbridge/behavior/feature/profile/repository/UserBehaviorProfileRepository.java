@@ -34,4 +34,8 @@ public interface UserBehaviorProfileRepository
     @Query("SELECT COUNT(p) FROM UserBehaviorProfile p "
             + "WHERE p.calculatedAt < :cutoff")
     long countStaleProfiles(@Param("cutoff") OffsetDateTime cutoff);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM UserBehaviorProfile p WHERE p.userId = :userId")
+    int deleteByUserId(@Param("userId") UUID userId);
 }

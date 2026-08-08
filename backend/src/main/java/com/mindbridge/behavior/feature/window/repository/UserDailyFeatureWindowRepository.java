@@ -38,4 +38,8 @@ public interface UserDailyFeatureWindowRepository extends JpaRepository<UserDail
 
     @Query("SELECT COUNT(DISTINCT f.featureDate) FROM UserDailyFeature f WHERE f.userId = :userId AND f.featureDate >= :windowStart AND f.featureDate <= :targetDate AND (f.stressScore IS NOT NULL OR f.moodScore IS NOT NULL OR f.energyScore IS NOT NULL OR f.sleepHours IS NOT NULL)")
     long countDaysWithExplicitData(@Param("userId") UUID userId, @Param("windowStart") LocalDate windowStart, @Param("targetDate") LocalDate targetDate);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM UserDailyFeature f WHERE f.userId = :userId")
+    int deleteByUserId(@Param("userId") UUID userId);
 }

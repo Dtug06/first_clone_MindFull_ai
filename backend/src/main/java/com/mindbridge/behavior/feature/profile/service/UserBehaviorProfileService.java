@@ -14,5 +14,7 @@ public interface UserBehaviorProfileService {
 
     Optional<ProfileSnapshot> findLatestForUser(UUID userId);
 
+    boolean hasSourceData(UUID userId);
+
     List<FeatureSeriesPoint> getSeries(UUID userId, WindowType windowType, FeatureType feature);
 }

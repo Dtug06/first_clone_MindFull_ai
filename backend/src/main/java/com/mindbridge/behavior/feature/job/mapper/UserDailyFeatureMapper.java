@@ -43,13 +43,13 @@ public interface UserDailyFeatureMapper {
     @Mapping(target = "engagementScore", expression = "java(result.engagement().score())")
     @Mapping(target = "messageCount", ignore = true)
     @Mapping(target = "activeChatSessionCount", ignore = true)
-    @Mapping(target = "checkinAssignedCount", expression = "java(result.engagement().checkinAssignedCount() == null ? null : result.engagement().checkinAssignedCount().intValue())")
-    @Mapping(target = "checkinCompletedCount", expression = "java(result.engagement().checkinCompletedCount() == null ? null : result.engagement().checkinCompletedCount().intValue())")
+    @Mapping(target = "checkinAssignedCount", expression = "java(toIntegerExact(result.engagement().checkinAssignedCount()))")
+    @Mapping(target = "checkinCompletedCount", expression = "java(toIntegerExact(result.engagement().checkinCompletedCount()))")
     @Mapping(target = "checkinCompletionRatio", expression = "java(result.engagement().checkinCompletionRatio())")
     @Mapping(target = "engagementScoreCalculationVersion", ignore = true)
     @Mapping(target = "exerciseCompletionRatio", expression = "java(result.exerciseCompletion().ratio())")
     @Mapping(target = "exerciseCompletionCalculationVersion", ignore = true)
-    @Mapping(target = "maxRiskLevel", expression = "java(result.maxRisk().riskLevel() == null ? null : result.maxRisk().riskLevel().intValue())")
+    @Mapping(target = "maxRiskLevel", expression = "java(result.maxRisk().riskLevel())")
     @Mapping(target = "riskEventCount", expression = "java(result.maxRisk().riskEventCount())")
     @Mapping(target = "maxRiskCalculationVersion", ignore = true)
     @Mapping(target = "explicitCoverage", source = "result.explicitCoverage")
@@ -63,42 +63,39 @@ public interface UserDailyFeatureMapper {
     @AfterMapping
     default void afterMapping(DailyFeatureResult result, @MappingTarget UserDailyFeature target) {
         if (result.stress() != null) {
-            target.setStressScoreCalculationVersion(parseVersion(result.stress().calculationVersion()));
+            target.setStressScoreCalculationVersion(result.stress().calculationVersion());
         }
         if (result.mood() != null) {
-            target.setMoodScoreCalculationVersion(parseVersion(result.mood().calculationVersion()));
-            target.setMoodRawValue(result.mood().rawLabel() == null ? null : new java.math.BigDecimal(result.mood().rawLabel()));
+            target.setMoodScoreCalculationVersion(result.mood().calculationVersion());
+            target.setMoodRawValue(result.mood().rawLabel());
         }
         if (result.energy() != null) {
-            target.setEnergyScoreCalculationVersion(parseVersion(result.energy().calculationVersion()));
+            target.setEnergyScoreCalculationVersion(result.energy().calculationVersion());
         }
         if (result.sleep() != null) {
-            target.setSleepScoreCalculationVersion(parseVersion(result.sleep().calculationVersion()));
-            if (result.sleep().qualityRaw() != null) {
-                target.setSleepQualityRaw(java.math.BigDecimal.valueOf(result.sleep().qualityRaw()));
-            }
+            target.setSleepScoreCalculationVersion(result.sleep().calculationVersion());
+            target.setSleepQualityRaw(result.sleep().qualityRaw());
         }
         if (result.anxietySignal() != null) {
-            target.setAnxietySignalCalculationVersion(parseVersion(result.anxietySignal().calculationVersion()));
+            target.setAnxietySignalCalculationVersion(result.anxietySignal().calculationVersion());
         }
         if (result.engagement() != null) {
-            target.setEngagementScoreCalculationVersion(parseVersion(result.engagement().calculationVersion()));
-            target.setMessageCount(result.engagement().messageCount());
-            target.setActiveChatSessionCount(result.engagement().activeChatSessionCount());
+            target.setEngagementScoreCalculationVersion(result.engagement().calculationVersion());
+            target.setMessageCount(toIntegerExact(result.engagement().messageCount()));
+            target.setActiveChatSessionCount(toIntegerExact(result.engagement().activeChatSessionCount()));
         }
         if (result.exerciseCompletion() != null) {
-            target.setExerciseCompletionCalculationVersion(parseVersion(result.exerciseCompletion().calculationVersion()));
+            target.setExerciseCompletionCalculationVersion(result.exerciseCompletion().calculationVersion());
         }
         if (result.maxRisk() != null) {
-            target.setMaxRiskCalculationVersion(parseVersion(result.maxRisk().calculationVersion()));
+            target.setMaxRiskCalculationVersion(result.maxRisk().calculationVersion());
         }
-        target.setCalculationVersion(parseVersion(result.calculationVersion()));
+        target.setFeatureVersion(result.featureVersion());
+        target.setCalculationVersion(result.calculationVersion());
     }
 
-    default Integer parseVersion(String v) {
-        if (v == null || v.isBlank()) return null;
-        try { return Integer.parseInt(v); }
-        catch (NumberFormatException e) { return null; }
+    default Integer toIntegerExact(Long value) {
+        return value == null ? null : Math.toIntExact(value);
     }
 
     @Named("mapAnxietySource")

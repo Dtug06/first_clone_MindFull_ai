@@ -1,5 +1,6 @@
 package com.mindbridge.chat.ai;
 
+import com.mindbridge.chat.personalization.PersonalizationContext;
 import java.util.List;
 import java.util.UUID;
 
@@ -7,7 +8,8 @@ import java.util.UUID;
 public record ConversationResponseInput(
         UUID userId,
         UUID sessionId,
-        List<HistoryMessage> messages
+        List<HistoryMessage> messages,
+        PersonalizationContext personalizationContext
 ) {
     public ConversationResponseInput {
         if (userId == null || sessionId == null) {
@@ -17,6 +19,16 @@ public record ConversationResponseInput(
             throw new IllegalArgumentException("messages must not be empty");
         }
         messages = List.copyOf(messages);
+        personalizationContext = personalizationContext == null
+                ? PersonalizationContext.empty()
+                : personalizationContext;
+    }
+
+    public ConversationResponseInput(
+            UUID userId,
+            UUID sessionId,
+            List<HistoryMessage> messages) {
+        this(userId, sessionId, messages, PersonalizationContext.empty());
     }
 
     public record HistoryMessage(String role, String content) {

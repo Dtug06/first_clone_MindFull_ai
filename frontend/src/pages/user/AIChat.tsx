@@ -18,8 +18,12 @@ import type {
   ChatSessionResponse,
 } from '../../api/chat';
 import { useLanguage } from '../../i18n';
+import {
+  clearChatSessionId,
+  readChatSessionId,
+  writeChatSessionId,
+} from '../../lib/accountStorage';
 
-const SESSION_STORAGE_KEY = 'mb:chat:sessionId';
 const HISTORY_PAGE_SIZE = 20;
 
 type LoadState =
@@ -43,7 +47,8 @@ function replyStatusMessage(status: ChatReplyStatus): string | null {
 }
 
 export default function AIChat() {
-  const { chatApi, lastRequestId, primeLastRequestId } = useAuth();
+  const { chatApi, lastRequestId, primeLastRequestId, user } = useAuth();
+  const userId = user?.id ?? null;
   const { t } = useLanguage();
 
   const [session, setSession] = useState<ChatSessionResponse | null>(null);
@@ -73,19 +78,19 @@ export default function AIChat() {
   const createNewSession = useCallback(async (): Promise<ChatSessionResponse> => {
     setLoadState({ kind: 'creating-session' });
     const created = await chatApi.createSession({});
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, created.id);
+    writeChatSessionId(userId, created.id);
     setSession(created);
     setMessages([]);
     setHistoryPage(0);
     setHasMoreHistory(false);
     return created;
-  }, [chatApi]);
+  }, [chatApi, userId]);
 
   const ensureSession = useCallback(async (): Promise<ChatSessionResponse> => {
     if (session) {
       return session;
     }
-    const stored = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const stored = readChatSessionId(userId);
     if (stored) {
       // Try to load the existing session — preserves chat history across reload.
       try {
@@ -112,7 +117,7 @@ export default function AIChat() {
           // 404 → session doesn't exist anymore (cleared server-side, or
           // owned by another user since we encode no principal in the id).
           if (e.status === 404 || e.status === 403) {
-            window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+            clearChatSessionId(userId);
           } else {
             throw e;
           }
@@ -122,7 +127,7 @@ export default function AIChat() {
       }
     }
     return createNewSession();
-  }, [chatApi, createNewSession, session]);
+  }, [chatApi, createNewSession, session, userId]);
 
   // Initial load: resolve session, then load history.
   useEffect(() => {
@@ -137,7 +142,7 @@ export default function AIChat() {
         }
         // ensureSession already populated messages when reusing a stored id.
         // Only fetch when we just created a brand-new (empty) session.
-        if (window.sessionStorage.getItem(SESSION_STORAGE_KEY) !== active.id) {
+        if (readChatSessionId(userId) !== active.id) {
           // shouldn't happen — defensive
         }
       } catch (e) {
@@ -231,7 +236,7 @@ export default function AIChat() {
         primeLastRequestId(e.requestId);
         // 404 on stale session — try to create a new one next send.
         if (e.status === 404 || e.status === 403) {
-          window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+          clearChatSessionId(userId);
           setSession(null);
           setMessages([]);
         }
@@ -256,7 +261,7 @@ export default function AIChat() {
     setLoadState({ kind: 'loading-history' });
     try {
       // Re-attempt session resolution — clears stale sessionStorage if 404.
-      window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      clearChatSessionId(userId);
       setSession(null);
       setMessages([]);
       await createNewSession();

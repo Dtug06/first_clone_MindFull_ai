@@ -101,6 +101,23 @@ class TrendCalculatorImplTest {
                 null, null, null, null);
     }
 
+    /** Sleep trend: hours avg available, but score NULL (sleep_quality_v1 not shipped). */
+    private static WindowAggregationResult wndSleep(
+            BigDecimal hours7, BigDecimal sleepCov7,
+            BigDecimal hoursPrior7, BigDecimal sleepPriorCov7) {
+        return new WindowAggregationResult(
+                USER, TARGET,
+                null, null, null, null, null,                                // stress
+                null, null, null, null,                                      // mood
+                null, null, null, null,                                      // energy
+                hours7, null, null, null, sleepCov7, null,                  // sleep (hours7d, score7d, ...)
+                null, null, null, null, null, null, null, null,              // anxiety
+                null, null, null, null, null, null, null, null,              // engagement
+                null, null, "NOT_APPLICABLE", "NOT_APPLICABLE",              // exercise
+                null, null, null, null, null, null,                          // max_risk
+                null, null, null, null);
+    }
+
     private void stubRecent(WindowAggregationResult w) {
         Mockito.when(windowSvc.aggregateForUser(eq(USER), eq(TARGET))).thenReturn(w);
     }
@@ -407,6 +424,88 @@ class TrendCalculatorImplTest {
                 .containsExactlyInAnyOrder(
                         "stress", "mood", "energy", "sleep",
                         "anxiety_signal", "engagement", "exercise_completion", "max_risk");
+    }
+
+    @Nested
+    @DisplayName("G4-FIXUP-2026-08-08 — sleep trend uses sleepHoursAvg as proxy")
+    class SleepHoursProxy {
+
+        @Test
+        @DisplayName("sleep_hours proxy: recent=8.0 prior=6.0 -> UP BETTER + deltaPct non-null")
+        void sleep_hoursProxy_higherRecent_isUp() {
+            // sleep_quality_v1 is not shipped yet, so sleepScore7d is NULL.
+            // Trend calculator should fall back to sleepHoursAvg7d (raw user data)
+            // so the trend is meaningful, not permanent UNKNOWN.
+            BigDecimal recentHours = new BigDecimal("8.0");
+            BigDecimal priorHours = new BigDecimal("6.0");
+            stubRecent(wndSleep(recentHours, BigDecimal.ONE, priorHours, BigDecimal.ONE));
+            stubPrior(wndSleep(priorHours, BigDecimal.ONE, recentHours, BigDecimal.ONE));
+            stubStreak(List.of(), List.of());
+
+            TrendSummary out = service.calculateTrendForUser(USER, TARGET, TZ, CONFIG);
+            TrendEntry sleep = findEntry(out, "sleep");
+
+            // delta = (8.0 - 6.0) / 6.0 = 0.3333, polarity BETTER -> UP
+            assertThat(sleep.direction()).isEqualTo(TrendDirection.UP);
+            assertThat(sleep.reason()).isEqualTo(TrendReason.SUFFICIENT_DATA);
+            assertThat(sleep.deltaPct()).isEqualByComparingTo("0.3333");
+            assertThat(sleep.recentAvg()).isEqualByComparingTo("8.0");
+            assertThat(sleep.priorAvg()).isEqualByComparingTo("6.0");
+        }
+
+        @Test
+        @DisplayName("sleep_hours proxy: recent=5.0 prior=8.0 -> DOWN BETTER (worse)")
+        void sleep_hoursProxy_lowerRecent_isDown() {
+            BigDecimal recentHours = new BigDecimal("5.0");
+            BigDecimal priorHours = new BigDecimal("8.0");
+            stubRecent(wndSleep(recentHours, BigDecimal.ONE, priorHours, BigDecimal.ONE));
+            stubPrior(wndSleep(priorHours, BigDecimal.ONE, recentHours, BigDecimal.ONE));
+            stubStreak(List.of(), List.of());
+
+            TrendSummary out = service.calculateTrendForUser(USER, TARGET, TZ, CONFIG);
+            TrendEntry sleep = findEntry(out, "sleep");
+
+            // delta = (5.0 - 8.0) / 8.0 = -0.375, polarity BETTER -> DOWN
+            assertThat(sleep.direction()).isEqualTo(TrendDirection.DOWN);
+            assertThat(sleep.reason()).isEqualTo(TrendReason.SUFFICIENT_DATA);
+            assertThat(sleep.deltaPct()).isEqualByComparingTo("-0.3750");
+        }
+
+        @Test
+        @DisplayName("sleep_hours proxy: zero hours prior -> NO_PRIOR_DATA (no division by zero)")
+        void sleep_hoursProxy_zeroPrior_isUnknown() {
+            stubRecent(wndSleep(new BigDecimal("8.0"), BigDecimal.ONE,
+                                BigDecimal.ZERO, BigDecimal.ONE));
+            stubPrior(wndSleep(BigDecimal.ZERO, BigDecimal.ONE,
+                                new BigDecimal("8.0"), BigDecimal.ONE));
+            stubStreak(List.of(), List.of());
+
+            TrendSummary out = service.calculateTrendForUser(USER, TARGET, TZ, CONFIG);
+            TrendEntry sleep = findEntry(out, "sleep");
+
+            assertThat(sleep.direction()).isEqualTo(TrendDirection.UNKNOWN);
+            assertThat(sleep.reason()).isEqualTo(TrendReason.NO_PRIOR_DATA);
+        }
+
+        @Test
+        @DisplayName("sleep_hours proxy: coverage below threshold -> INSUFFICIENT_RECENT_COVERAGE")
+        void sleep_hoursProxy_lowCoverage_isUnknown() {
+            stubsleepWith30PercentRecentCoverage();
+            stubStreak(List.of(), List.of());
+
+            TrendSummary out = service.calculateTrendForUser(USER, TARGET, TZ, CONFIG);
+            TrendEntry sleep = findEntry(out, "sleep");
+
+            assertThat(sleep.direction()).isEqualTo(TrendDirection.UNKNOWN);
+            assertThat(sleep.reason()).isEqualTo(TrendReason.INSUFFICIENT_RECENT_COVERAGE);
+        }
+
+        private void stubsleepWith30PercentRecentCoverage() {
+            stubRecent(wndSleep(new BigDecimal("8.0"), new BigDecimal("0.30"),
+                                new BigDecimal("6.0"), BigDecimal.ONE));
+            stubPrior(wndSleep(new BigDecimal("6.0"), BigDecimal.ONE,
+                                new BigDecimal("8.0"), new BigDecimal("0.30")));
+        }
     }
 
     private static TrendEntry findEntry(TrendSummary summary, String code) {

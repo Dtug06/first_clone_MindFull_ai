@@ -102,15 +102,15 @@ public class IdempotencyService {
      *
      * <p>Concrete flow:
      * <ol>
-     *   <li><b>Replay lookup (read-only tx)</b> — short transaction to
-     *       check for an existing record and acquire the PESSIMISTIC_WRITE
-     *       lock on the natural-key window (gap lock in PostgreSQL).</li>
+     *   <li><b>Replay lookup (short read-write tx)</b> — checks for an
+     *       existing record and acquires a PESSIMISTIC_WRITE row lock when
+     *       one exists. PostgreSQL rejects SELECT FOR UPDATE in a read-only
+     *       transaction, so this lookup must not be marked read-only.</li>
      *   <li><b>Expired record cleanup (REQUIRES_NEW tx)</b> — if the found
      *       record is expired, delete it in its own tx so the deletion is
      *       committed before the snapshot insert. The lookup lock is
-     *       released at this point; in PostgreSQL the gap lock is also
-     *       released, but the supplier's own insert will follow
-     *       immediately.</li>
+     *       released at this point; the database UNIQUE constraint remains
+     *       the final protection against concurrent inserts.</li>
      *   <li><b>Supplier execution</b> — the supplier carries its own
      *       {@code @Transactional} which opens a fresh transaction
      *       (since the outer method is no longer {@code @Transactional},
@@ -175,20 +175,19 @@ public class IdempotencyService {
     }
 
     /**
-     * Read-only lookup with pessimistic lock to serialize concurrent requests
+     * Lookup with a pessimistic lock to serialize concurrent requests
      * for the same natural key. Returns empty if no row exists.
      *
-     * <p>Uses a separate read-only tx (not joined to any outer tx because
+     * <p>Uses a separate short read-write tx (not joined to any outer tx because
      * this method is called without an outer @Transactional).
      */
     Optional<IdempotencyKey> lookupForReplay(UUID userId, String endpoint, String idempotencyKey) {
         if (recordTransactionTemplate == null) {
             return repository.lockByUserIdAndEndpointAndKeyValue(userId, endpoint, idempotencyKey);
         }
-        TransactionTemplate readOnlyTemplate = new TransactionTemplate(
+        TransactionTemplate lookupTemplate = new TransactionTemplate(
                 recordTransactionTemplate.getTransactionManager());
-        readOnlyTemplate.setReadOnly(true);
-        return readOnlyTemplate.execute(s ->
+        return lookupTemplate.execute(s ->
                 repository.lockByUserIdAndEndpointAndKeyValue(userId, endpoint, idempotencyKey));
     }
 

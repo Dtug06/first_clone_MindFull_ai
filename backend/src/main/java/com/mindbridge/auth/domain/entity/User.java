@@ -27,7 +27,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true, nullable = false)
+    // PostgreSQL CITEXT keeps both uniqueness and lookup case-insensitive.
+    // Declaring the real database type also lets Hibernate `validate` compare
+    // this entity with the Flyway-owned schema correctly.
+    @Column(unique = true, nullable = false, columnDefinition = "citext")
     private String email;
 
     @Column(name = "password_hash", nullable = false)
@@ -147,6 +150,28 @@ public class User {
      */
     public void setTimezone(String timezone) {
         this.timezone = timezone;
+    }
+
+    /**
+     * Package-private setter for test support. Allows tests to backdate
+     * createdAt so that daysSinceRegistration calculations produce a
+     * denominator >= 7, keeping explicitCoverage fractions in [0,1].
+     */
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    /**
+     * Test-only factory: creates a user and directly sets createdAt, bypassing
+     * @PrePersist. For integration tests only.
+     */
+    public static User registerForTest(String email, String passwordHash,
+            String displayName, String timezone, Instant createdAt) {
+        User user = register(email, passwordHash, displayName);
+        user.timezone = timezone;
+        // Bypass @PrePersist — direct field write.
+        user.createdAt = createdAt;
+        return user;
     }
 
     public enum UserRole {

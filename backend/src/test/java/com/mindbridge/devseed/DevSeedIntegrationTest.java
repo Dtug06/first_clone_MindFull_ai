@@ -403,12 +403,15 @@ class DevSeedIntegrationTest {
     @Test
     @DisplayName("Safety — SeedGuard throws when invoked under a non-test, non-seed profile")
     void seedGuard_throwsOnNonSeedNonTestProfile() {
-        // Construct a guard with run=false and an empty Environment (no test profile).
-        var stubProperties = new com.mindbridge.devseed.DevSeedProperties(
+        // Construct a guard with run=false and a disabled trend-seed flag,
+        // and an empty Environment (no test profile).
+        var stubDevSeed = new com.mindbridge.devseed.DevSeedProperties(
                 false, com.mindbridge.devseed.DevSeedScenario.DEFAULT);
+        var stubTrendSeed = new com.mindbridge.devseed.SevenDayTrendSeedProperties(
+                false, null, null);
         org.springframework.mock.env.MockEnvironment stubEnv =
                 new org.springframework.mock.env.MockEnvironment();
-        var stub = new com.mindbridge.devseed.SeedGuard(stubProperties, stubEnv);
+        var stub = new com.mindbridge.devseed.SeedGuard(stubDevSeed, stubTrendSeed, stubEnv);
         assertThatThrownBy(stub::requireSeedAllowed)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mindbridge.seed.run=false");

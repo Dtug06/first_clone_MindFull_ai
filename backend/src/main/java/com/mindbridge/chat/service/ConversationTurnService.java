@@ -9,6 +9,8 @@ import com.mindbridge.chat.ai.ConversationResponseProvider;
 import com.mindbridge.chat.dto.ChatMessageResponse;
 import com.mindbridge.chat.dto.ChatTurnResponse;
 import com.mindbridge.chat.dto.ChatTurnResponse.ReplyStatus;
+import com.mindbridge.chat.personalization.PersonalizationContext;
+import com.mindbridge.chat.personalization.PersonalizationContextService;
 import com.mindbridge.safety.resolver.dto.ResolverDecision;
 import com.mindbridge.safety.response.executor.SafetyResponseTemplateExecutor;
 import com.mindbridge.safety.response.executor.SafetyResponseTemplateExecutor.ResolvedResponse;
@@ -35,18 +37,21 @@ public class ConversationTurnService {
     private final SafetyResponseTemplateExecutor templateExecutor;
     private final SafetyEventService safetyEventService;
     private final ChatAnalysisPipelineService analysisPipelineService;
+    private final PersonalizationContextService personalizationContextService;
 
     public ConversationTurnService(
             ConversationMessageService messageService,
             ConversationResponseProvider responseProvider,
             SafetyResponseTemplateExecutor templateExecutor,
             SafetyEventService safetyEventService,
-            ChatAnalysisPipelineService analysisPipelineService) {
+            ChatAnalysisPipelineService analysisPipelineService,
+            PersonalizationContextService personalizationContextService) {
         this.messageService = messageService;
         this.responseProvider = responseProvider;
         this.templateExecutor = templateExecutor;
         this.safetyEventService = safetyEventService;
         this.analysisPipelineService = analysisPipelineService;
+        this.personalizationContextService = personalizationContextService;
     }
 
     public ChatTurnResponse sendTurn(UUID sessionId, String content) {
@@ -84,10 +89,12 @@ public class ConversationTurnService {
         userMessage = withAnalysisStatus(userMessage, analysisStatus);
 
         try {
+            PersonalizationContext personalizationContext = loadPersonalizationContext(userId);
             String reply = responseProvider.generate(new ConversationResponseInput(
                     userId,
                     sessionId,
-                    messageService.recentHistory(sessionId)));
+                    messageService.recentHistory(sessionId),
+                    personalizationContext));
             ChatMessageResponse assistant = messageService.saveAssistantMessage(
                     sessionId, userId, reply);
             return ChatTurnResponse.of(userMessage, assistant, ReplyStatus.SUCCEEDED);
@@ -97,6 +104,16 @@ public class ConversationTurnService {
             log.warn("Conversation response unavailable for sessionId={} messageId={} code={} detail={}",
                     sessionId, userMessage.id(), ex.getCode().getCode(), ex.getMessage());
             return ChatTurnResponse.of(userMessage, null, ReplyStatus.PROVIDER_UNAVAILABLE);
+        }
+    }
+
+    private PersonalizationContext loadPersonalizationContext(UUID userId) {
+        try {
+            return personalizationContextService.load(userId);
+        } catch (RuntimeException ex) {
+            log.warn("Personalization context unavailable for userId={} causeClass={}",
+                    userId, ex.getClass().getSimpleName());
+            return PersonalizationContext.empty();
         }
     }
 

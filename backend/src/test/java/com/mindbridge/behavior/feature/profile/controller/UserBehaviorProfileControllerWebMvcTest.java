@@ -9,16 +9,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mindbridge.auth.filter.JwtAuthenticationFilter;
+import com.mindbridge.auth.repository.UserRepository;
 import com.mindbridge.auth.service.JwtService;
 import com.mindbridge.behavior.feature.profile.DataQualityStatus;
 import com.mindbridge.behavior.feature.profile.dto.ProfileSnapshot;
 import com.mindbridge.behavior.feature.profile.service.UserBehaviorProfileResponseMapper;
 import com.mindbridge.behavior.feature.profile.service.UserBehaviorProfileService;
+import com.mindbridge.behavior.feature.profile.service.OnDemandAggregationTrigger;
 import com.mindbridge.common.config.SecurityConfig;
 import com.mindbridge.common.service.CurrentUserService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +56,9 @@ class UserBehaviorProfileControllerWebMvcTest {
     @MockBean UserBehaviorProfileService profileService;
     @MockBean UserBehaviorProfileResponseMapper responseMapper;
     @MockBean CurrentUserService currentUserService;
+    @MockBean OnDemandAggregationTrigger onDemandAggregationTrigger;
+    @MockBean UserRepository userRepository;
+    @MockBean Clock clock;
     @MockBean JwtService jwtService; // needed for JwtAuthenticationFilter to wire
 
     UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");

@@ -16,6 +16,8 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * JPA entity for {@code behavioral_events}.
@@ -75,7 +77,8 @@ public class BehavioralEvent {
      * MUST NOT contain raw user message content, raw answer content, raw
      * option labels, or PII. See G2-T07 plan §2.3.
      */
-    @Column(name = "properties", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "properties", columnDefinition = "jsonb")
     private String properties;
 
     @Column(name = "schema_version", nullable = false)

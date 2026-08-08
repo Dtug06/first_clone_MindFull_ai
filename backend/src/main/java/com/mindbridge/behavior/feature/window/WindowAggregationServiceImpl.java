@@ -114,19 +114,19 @@ public class WindowAggregationServiceImpl implements WindowAggregationService {
         long engagementDays30 = countDistinctDays(rows30, UserDailyFeature::getEngagementScore);
         BigDecimal engagementCoverage7d = coverage(engagementDays7, denominator7);
         BigDecimal engagementCoverage30d = coverage(engagementDays30, denominator30);
-        Long messageCountSum7d = sumLong(rows7, UserDailyFeature::getMessageCount);
-        Long messageCountSum30d = sumLong(rows30, UserDailyFeature::getMessageCount);
+        Long messageCountSum7d = sumLongInt(rows7, UserDailyFeature::getMessageCount);
+        Long messageCountSum30d = sumLongInt(rows30, UserDailyFeature::getMessageCount);
         Long checkinCompletedSum7d = sumLongInt(rows7, UserDailyFeature::getCheckinCompletedCount);
         Long checkinCompletedSum30d = sumLongInt(rows30, UserDailyFeature::getCheckinCompletedCount);
 
         String exerciseStatus = "NOT_APPLICABLE";
 
-        Integer maxRiskLevel7d = maxInt(rows7, UserDailyFeature::getMaxRiskLevel);
-        Integer maxRiskLevel30d = maxInt(rows30, UserDailyFeature::getMaxRiskLevel);
+        Integer maxRiskLevel7d = maxShort(rows7, UserDailyFeature::getMaxRiskLevel);
+        Integer maxRiskLevel30d = maxShort(rows30, UserDailyFeature::getMaxRiskLevel);
         Long riskEventCount7d = sumLongInt(rows7, UserDailyFeature::getRiskEventCount);
         Long riskEventCount30d = sumLongInt(rows30, UserDailyFeature::getRiskEventCount);
-        long maxRiskDays7 = countDistinctDaysInt(rows7, UserDailyFeature::getMaxRiskLevel);
-        long maxRiskDays30 = countDistinctDaysInt(rows30, UserDailyFeature::getMaxRiskLevel);
+        long maxRiskDays7 = countDistinctDaysShort(rows7, UserDailyFeature::getMaxRiskLevel);
+        long maxRiskDays30 = countDistinctDaysShort(rows30, UserDailyFeature::getMaxRiskLevel);
         BigDecimal maxRiskCoverage7d = coverage(maxRiskDays7, denominator7);
         BigDecimal maxRiskCoverage30d = coverage(maxRiskDays30, denominator30);
 
@@ -202,8 +202,8 @@ public class WindowAggregationServiceImpl implements WindowAggregationService {
                 .count();
     }
 
-    private long countDistinctDaysInt(List<UserDailyFeature> rows,
-            java.util.function.Function<UserDailyFeature, Integer> getter) {
+    private long countDistinctDaysShort(List<UserDailyFeature> rows,
+            java.util.function.Function<UserDailyFeature, Short> getter) {
         return rows.stream()
                 .filter(r -> getter.apply(r) != null)
                 .map(UserDailyFeature::getFeatureDate)
@@ -226,16 +226,6 @@ public class WindowAggregationServiceImpl implements WindowAggregationService {
         return hasSource ? "CHAT_ANALYSIS" : "NONE";
     }
 
-    private Long sumLong(List<UserDailyFeature> rows,
-            java.util.function.Function<UserDailyFeature, Long> getter) {
-        long sum = rows.stream()
-                .map(getter)
-                .filter(Objects::nonNull)
-                .mapToLong(Long::longValue)
-                .sum();
-        return sum == 0 ? null : sum;
-    }
-
     private Long sumLongInt(List<UserDailyFeature> rows,
             java.util.function.Function<UserDailyFeature, Integer> getter) {
         long sum = rows.stream()
@@ -246,12 +236,13 @@ public class WindowAggregationServiceImpl implements WindowAggregationService {
         return sum == 0 ? null : sum;
     }
 
-    private Integer maxInt(List<UserDailyFeature> rows,
-            java.util.function.Function<UserDailyFeature, Integer> getter) {
-        return rows.stream()
+    private Integer maxShort(List<UserDailyFeature> rows,
+            java.util.function.Function<UserDailyFeature, Short> getter) {
+        Short value = rows.stream()
                 .map(getter)
                 .filter(Objects::nonNull)
                 .max(Comparator.naturalOrder())
                 .orElse(null);
+        return value == null ? null : value.intValue();
     }
 }

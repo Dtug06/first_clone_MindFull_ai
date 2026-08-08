@@ -15,6 +15,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * JPA entity for {@code idempotency_keys}.
@@ -54,7 +56,8 @@ public class IdempotencyKey {
     @Column(name = "response_status", nullable = false)
     private Short responseStatus;
 
-    @Column(name = "response_body", nullable = false, columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "response_body", nullable = false, columnDefinition = "jsonb")
     private String responseBody;
 
     @Column(name = "created_at", nullable = false)

@@ -14,6 +14,7 @@ import com.mindbridge.behavior.feature.dto.DailySourceAggregation.ExplicitAnswer
 import com.mindbridge.behavior.repository.BehavioralEventRepository;
 import com.mindbridge.dailyquestion.domain.DailyQuestionAnswer;
 import com.mindbridge.dailyquestion.repository.DailyQuestionAnswerRepository;
+import com.mindbridge.dailyquestion.repository.DailyQuestionAssignmentRepository;
 import jakarta.annotation.PostConstruct;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -53,6 +54,7 @@ public class DailySourceAggregationServiceImpl implements DailySourceAggregation
     private static final String CBT_TABLE_NAME = "exercise_assignments";
 
     private final DailyQuestionAnswerRepository answerRepository;
+    private final DailyQuestionAssignmentRepository assignmentRepository;
     private final ChatAnalysisResultRepository chatAnalysisRepository;
     private final BehavioralEventRepository behavioralEventRepository;
     private final DataSource dataSource;
@@ -61,10 +63,12 @@ public class DailySourceAggregationServiceImpl implements DailySourceAggregation
 
     public DailySourceAggregationServiceImpl(
             DailyQuestionAnswerRepository answerRepository,
+            DailyQuestionAssignmentRepository assignmentRepository,
             ChatAnalysisResultRepository chatAnalysisRepository,
             BehavioralEventRepository behavioralEventRepository,
             DataSource dataSource) {
         this.answerRepository = answerRepository;
+        this.assignmentRepository = assignmentRepository;
         this.chatAnalysisRepository = chatAnalysisRepository;
         this.behavioralEventRepository = behavioralEventRepository;
         this.dataSource = dataSource;
@@ -125,7 +129,8 @@ public class DailySourceAggregationServiceImpl implements DailySourceAggregation
 
         List<ExplicitAnswer> explicitAnswers = aggregateExplicitAnswers(userId, localDate);
         List<EffectiveChatAnalysis> effectiveChatAnalyses = aggregateChatAnalyses(userId, windowStartUtc, windowEndUtc);
-        BehavioralEventCounts behavioralCounts = aggregateBehavioralEvents(userId, fromUtc, toUtc);
+        BehavioralEventCounts behavioralCounts = aggregateBehavioralEvents(
+                userId, localDate, fromUtc, toUtc);
         CbtAvailability cbtAvailability = resolveCbtAvailability();
         CbtAggregation cbtActivity = (cbtAvailability == CbtAvailability.COMPUTABLE)
                 ? aggregateCbtActivity()
@@ -169,13 +174,14 @@ public class DailySourceAggregationServiceImpl implements DailySourceAggregation
                 .toList();
     }
 
-    private BehavioralEventCounts aggregateBehavioralEvents(UUID userId, Instant fromUtc, Instant toUtc) {
+    private BehavioralEventCounts aggregateBehavioralEvents(
+            UUID userId, LocalDate localDate, Instant fromUtc, Instant toUtc) {
         BehavioralEventCountsRow row = behavioralEventRepository.aggregateByUserAndDay(userId, fromUtc, toUtc);
         long chatMsg = (row == null) ? 0L : row.getChatMessageCount();
         long sessions = (row == null) ? 0L : row.getActiveChatSessionCount();
         long completed = (row == null) ? 0L : row.getCheckinCompletedCount();
         long skipped = (row == null) ? 0L : row.getCheckinSkippedCount();
-        long assigned = 0L;
+        long assigned = assignmentRepository.countByUserIdAndAssignedForDate(userId, localDate);
         return new BehavioralEventCounts(chatMsg, sessions, completed, skipped, assigned);
     }
 

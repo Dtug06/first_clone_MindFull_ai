@@ -20,6 +20,9 @@ public interface DailyQuestionAnswerRepository extends JpaRepository<DailyQuesti
      */
     boolean existsByAssignmentId(UUID assignmentId);
 
+    /** Returns whether the user has supplied any Daily Check-in source data. */
+    boolean existsByUserId(UUID userId);
+
     /**
      * Returns the user's answers in the given time window, newest first.
      * Used by the history endpoint.

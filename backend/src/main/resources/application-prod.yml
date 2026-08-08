@@ -25,9 +25,9 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # Once Flyway is added in T04, flip to `validate` so an entity
-      # vs schema mismatch crashes the boot loud and early.
-      ddl-auto: none
+      # Flyway owns schema changes; never auto-create or auto-update in prod.
+      # Validation makes entity/schema conflicts fail fast at startup.
+      ddl-auto: validate
     properties:
       hibernate.jdbc.time_zone: UTC
 

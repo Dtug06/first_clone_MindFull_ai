@@ -5,10 +5,11 @@ import PageTransitionWrapper from '../../components/layout/PageTransitionWrapper
 import LanguageSwitcher from '../../components/ui/LanguageSwitcher';
 import { useAuth } from '../../auth/AuthContext';
 import { useLanguage } from '../../i18n';
+import { clearChatSessionId } from '../../lib/accountStorage';
 
 export default function UserLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -31,8 +32,8 @@ export default function UserLayout() {
   ];
 
   const signOut = () => {
+    clearChatSessionId(user?.id ?? null);
     logout();
-    window.sessionStorage.removeItem('mb:chat:active-session-id');
     navigate('/auth', { replace: true });
   };
 

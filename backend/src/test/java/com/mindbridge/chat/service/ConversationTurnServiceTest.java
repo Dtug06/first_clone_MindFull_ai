@@ -12,6 +12,8 @@ import com.mindbridge.chat.ai.ConversationResponseProvider;
 import com.mindbridge.analysis.pipeline.ChatAnalysisPipelineService;
 import com.mindbridge.chat.dto.ChatMessageResponse;
 import com.mindbridge.chat.dto.ChatTurnResponse;
+import com.mindbridge.chat.personalization.PersonalizationContext;
+import com.mindbridge.chat.personalization.PersonalizationContextService;
 import com.mindbridge.safety.event.service.SafetyEventService;
 import com.mindbridge.safety.resolver.dto.ResolverDecision;
 import com.mindbridge.safety.response.executor.SafetyResponseTemplateExecutor;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +41,8 @@ class ConversationTurnServiceTest {
     private SafetyEventService safetyEventService;
     @Mock
     private ChatAnalysisPipelineService analysisPipelineService;
+    @Mock
+    private PersonalizationContextService personalizationContextService;
 
     private ConversationTurnService service;
     private UUID userId;
@@ -48,7 +53,7 @@ class ConversationTurnServiceTest {
     void setUp() {
         service = new ConversationTurnService(
                 messageService, responseProvider, templateExecutor, safetyEventService,
-                analysisPipelineService);
+                analysisPipelineService, personalizationContextService);
         userId = UUID.randomUUID();
         sessionId = UUID.randomUUID();
         userMessage = new ChatMessageResponse(
@@ -85,6 +90,9 @@ class ConversationTurnServiceTest {
                 .thenReturn(ChatMessageResponse.AnalysisStatus.SUCCEEDED);
         when(messageService.recentHistory(sessionId)).thenReturn(List.of(
                 new ConversationResponseInput.HistoryMessage("user", "hello")));
+        PersonalizationContext personalization = new PersonalizationContext(
+                "Minh", java.time.LocalDate.of(2026, 8, 6), List.of(), null);
+        when(personalizationContextService.load(userId)).thenReturn(personalization);
         when(responseProvider.generate(any(ConversationResponseInput.class)))
                 .thenReturn("supportive reply");
         ChatMessageResponse assistant = new ChatMessageResponse(
@@ -102,6 +110,10 @@ class ConversationTurnServiceTest {
         verifyNoInteractions(templateExecutor);
         verify(analysisPipelineService).analyze(
                 userMessage.id(), userId, userMessage.content());
+        ArgumentCaptor<ConversationResponseInput> inputCaptor =
+                ArgumentCaptor.forClass(ConversationResponseInput.class);
+        verify(responseProvider).generate(inputCaptor.capture());
+        assertThat(inputCaptor.getValue().personalizationContext()).isEqualTo(personalization);
     }
 
     @Test
@@ -114,6 +126,8 @@ class ConversationTurnServiceTest {
                 .thenThrow(new IllegalStateException("provider unavailable"));
         when(messageService.recentHistory(sessionId)).thenReturn(List.of(
                 new ConversationResponseInput.HistoryMessage("user", "hello")));
+        when(personalizationContextService.load(userId))
+                .thenReturn(PersonalizationContext.empty());
         when(responseProvider.generate(any(ConversationResponseInput.class)))
                 .thenReturn("supportive reply");
         ChatMessageResponse assistant = new ChatMessageResponse(
@@ -146,6 +160,7 @@ class ConversationTurnServiceTest {
                 .isEqualTo(ChatTurnResponse.ReplyStatus.SAFETY_TEMPLATE_MISSING);
         assertThat(result.assistantMessage()).isNull();
         verify(responseProvider, never()).generate(any());
+        verifyNoInteractions(personalizationContextService);
         verifyNoInteractions(analysisPipelineService);
         verify(safetyEventService).markShowTemplateSkipped(
                 safetyEventId, "No approved Safety response template configured");
