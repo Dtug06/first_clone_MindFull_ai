@@ -3,14 +3,19 @@ package com.mindbridge.behavior.feature.profile.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mindbridge.auth.repository.UserRepository;
 import com.mindbridge.behavior.feature.profile.DataQualityStatus;
 import com.mindbridge.behavior.feature.profile.dto.ProfileSnapshot;
 import com.mindbridge.behavior.feature.profile.dto.UserBehaviorProfileResponse;
 import com.mindbridge.behavior.feature.profile.service.UserBehaviorProfileResponseMapper;
 import com.mindbridge.behavior.feature.profile.service.UserBehaviorProfileService;
+import com.mindbridge.behavior.feature.profile.service.OnDemandAggregationTrigger;
 import com.mindbridge.behavior.feature.trend.dto.StreakInfo;
 import com.mindbridge.behavior.feature.trend.dto.TrendDirection;
 import com.mindbridge.behavior.feature.trend.dto.TrendEntry;
@@ -23,6 +28,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +46,9 @@ class UserBehaviorProfileControllerTest {
 
     @Mock UserBehaviorProfileService profileService;
     @Mock CurrentUserService currentUserService;
+    @Mock OnDemandAggregationTrigger onDemandAggregationTrigger;
+    @Mock UserRepository userRepository;
+    Clock clock = Clock.fixed(Instant.parse("2026-08-08T12:00:00Z"), ZoneOffset.UTC);
 
     // G4-T12: register JavaTimeModule so the mapper can deserialize
     // TrendSummary JSON (ZoneId + LocalDate) into typed records.
@@ -51,7 +62,7 @@ class UserBehaviorProfileControllerTest {
     @BeforeEach
     void setUp() {
         controller = new UserBehaviorProfileController(profileService, mapper,
-                currentUserService);
+                currentUserService, onDemandAggregationTrigger, userRepository, clock);
     }
 
     @Test
@@ -146,5 +157,44 @@ class UserBehaviorProfileControllerTest {
         org.mockito.Mockito.verify(profileService).findLatestForUser(differentUser);
         org.mockito.Mockito.verify(profileService, org.mockito.Mockito.never())
                 .findLatestForUser(userId);
+    }
+
+    @Test
+    @DisplayName("Missing profile with no Daily Answer remains 404 without aggregation")
+    void noSourceData_doesNotAggregate() {
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(profileService.findLatestForUser(userId)).thenReturn(Optional.empty());
+        when(profileService.hasSourceData(userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> controller.getCurrentProfile())
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(onDemandAggregationTrigger, never())
+                .triggerForUserAndDate(org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("Missing profile with Daily Answer aggregates lazily and reloads")
+    void sourceData_lazyAggregatesAndReloads() {
+        ProfileSnapshot generated = mock(ProfileSnapshot.class);
+        when(generated.userId()).thenReturn(userId);
+        when(generated.windowEnd()).thenReturn(LocalDate.of(2026, 8, 8));
+        when(generated.dataCoverage()).thenReturn(BigDecimal.ZERO);
+        when(generated.confidence()).thenReturn(BigDecimal.ZERO);
+        when(generated.dataQualityStatus()).thenReturn(DataQualityStatus.INSUFFICIENT);
+        when(generated.riskLevel()).thenReturn((short) 1);
+        when(generated.calculatedAt()).thenReturn(OffsetDateTime.parse("2026-08-08T12:00:00Z"));
+        when(currentUserService.getCurrentUserId()).thenReturn(userId);
+        when(profileService.findLatestForUser(userId))
+                .thenReturn(Optional.empty(), Optional.of(generated));
+        when(profileService.hasSourceData(userId)).thenReturn(true);
+        when(onDemandAggregationTrigger.triggerForUserAndDate(
+                userId, LocalDate.of(2026, 8, 8))).thenReturn(true);
+
+        assertThat(controller.getCurrentProfile().getStatusCode().is2xxSuccessful()).isTrue();
+        verify(onDemandAggregationTrigger)
+                .triggerForUserAndDate(userId, LocalDate.of(2026, 8, 8));
+        verify(profileService, org.mockito.Mockito.times(2)).findLatestForUser(userId);
     }
 }

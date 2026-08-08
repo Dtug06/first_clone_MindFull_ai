@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, BarChart2, Info, Moon, RefreshCw, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Activity, BarChart2, Info, Moon, RefreshCw, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import type { UserBehaviorProfileResponse } from '../../api/behavior';
@@ -19,9 +19,14 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<UserBehaviorProfileResponse | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setState('loading');
+  const load = useCallback(async (keepEmptyState = false) => {
+    if (keepEmptyState) {
+      setRefreshing(true);
+    } else {
+      setState('loading');
+    }
     setError(null);
     primeLastRequestId(null);
     try {
@@ -40,6 +45,8 @@ export default function Dashboard() {
         setError(e instanceof Error ? e.message : 'Unexpected error');
       }
       setState('error');
+    } finally {
+      setRefreshing(false);
     }
   }, [behaviorApi, primeLastRequestId]);
 
@@ -86,11 +93,20 @@ export default function Dashboard() {
               <div>
                 <h2 className="font-semibold text-textMain">Your profile is not available yet</h2>
                 <p className="mt-2 text-sm leading-relaxed text-textMuted">
-                  Complete Daily Check-ins and use Chat normally. The G4 aggregation job must run before this dashboard has enough verified data.
+                  Complete a Daily Check-in, then refresh to build your verified G4 profile from real data.
                 </p>
                 <p className="mt-2 text-xs text-textMuted">
                   MindBridge does not substitute demo numbers while your real profile is unavailable.
                 </p>
+                <button
+                  type="button"
+                  disabled={refreshing}
+                  onClick={() => void load(true)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing…' : 'Refresh now'}
+                </button>
               </div>
             </div>
           </div>
@@ -138,20 +154,6 @@ export default function Dashboard() {
                 <Quality label="Coverage" value={formatPercent(profile.dataCoverage)} />
                 <Quality label="Confidence" value={formatPercent(profile.confidence)} />
                 <Quality label="Current risk state" value={profile.riskLevel === null ? '—' : `L${profile.riskLevel}`} />
-              </div>
-            </motion.div>
-
-            <motion.div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-3xl p-6 mb-6" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-textMain mb-1">Verified profile snapshot</h3>
-                  <p className="text-sm text-textMuted leading-relaxed">
-                    Window ending {profile.windowEnd}. Values shown here come from the backend G4 aggregation pipeline, not frontend mock data.
-                  </p>
-                </div>
               </div>
             </motion.div>
 

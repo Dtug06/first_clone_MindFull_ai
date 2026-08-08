@@ -3,6 +3,7 @@ package com.mindbridge.dailyquestion.service;
 import com.mindbridge.behavior.domain.BehavioralEventType;
 import com.mindbridge.behavior.domain.SourceType;
 import com.mindbridge.behavior.service.BehavioralEventService;
+import com.mindbridge.behavior.feature.profile.service.OnDemandAggregationTrigger;
 import com.mindbridge.common.exception.AccessDeniedException;
 import com.mindbridge.common.exception.ErrorCode;
 import com.mindbridge.common.exception.ResourceNotFoundException;
@@ -36,8 +37,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Handles submission and history of daily question answers (G2-T06).
@@ -60,6 +65,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class DailyQuestionAnswerService {
 
+    private static final Logger log = LoggerFactory.getLogger(DailyQuestionAnswerService.class);
+
     /** Maximum length of a free-text answer. Conservative MVP cap to keep JSONB small. */
     static final int MAX_TEXT_LENGTH = 5000;
 
@@ -73,6 +80,7 @@ public class DailyQuestionAnswerService {
     private final Clock clock;
     private final BehavioralEventService behavioralEventService;
     private final SeedGuard seedGuard;
+    private final OnDemandAggregationTrigger onDemandAggregationTrigger;
 
     public DailyQuestionAnswerService(
             DailyQuestionAnswerRepository answerRepository,
@@ -81,7 +89,8 @@ public class DailyQuestionAnswerService {
             CurrentUserService currentUserService,
             Clock clock,
             BehavioralEventService behavioralEventService,
-            SeedGuard seedGuard) {
+            SeedGuard seedGuard,
+            OnDemandAggregationTrigger onDemandAggregationTrigger) {
         this.answerRepository = answerRepository;
         this.assignmentRepository = assignmentRepository;
         this.optionRepository = optionRepository;
@@ -89,6 +98,7 @@ public class DailyQuestionAnswerService {
         this.clock = clock;
         this.behavioralEventService = behavioralEventService;
         this.seedGuard = seedGuard;
+        this.onDemandAggregationTrigger = onDemandAggregationTrigger;
     }
 
     // --- Submit ---
@@ -171,7 +181,31 @@ public class DailyQuestionAnswerService {
                 assignment.getId(),
                 props);
 
+        registerAggregationAfterCommit(userId, assignment.getAssignedForDate());
+
         return AnswerResponse.from(saved);
+    }
+
+    /** G4-T14: aggregate only after the answer transaction commits successfully. */
+    private void registerAggregationAfterCommit(UUID userId, LocalDate assignedForDate) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            log.warn("G4 on-demand aggregation hook was not registered because transaction synchronization is inactive: userId={} date={}",
+                    userId, assignedForDate);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    onDemandAggregationTrigger.triggerForUserAndDate(userId, assignedForDate);
+                } catch (Exception e) {
+                    // The facade is fail-soft; this final guard protects the saved answer
+                    // even if a future implementation accidentally violates that contract.
+                    log.warn("G4 after-commit aggregation callback failed: userId={} date={}",
+                            userId, assignedForDate, e);
+                }
+            }
+        });
     }
 
     /**

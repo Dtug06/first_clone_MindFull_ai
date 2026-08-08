@@ -1209,7 +1209,7 @@ Sau audit repository, thay `UNKNOWN` bằng trạng thái thực tế.
 | `/api/v1/chat/sessions` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/chat/sessions/{id}/messages` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/daily-checkins/today` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
-| `/api/v1/behavior/profile` | GET | IMPLEMENTED | NOT_CONNECTED | IMPLEMENTED | G4-T09 + G4-T12: full payload incl. nested `trendSummary` (TrendSummaryResponse), `dataQualityStatus`, 7d/30d split + `DominantTopic[]`. Security 401/403 + 404 declared. 1 unit + 4 WebMvc + 28 G4-T09 tests pass. Placeholder thresholds `MIN_TREND_COVERAGE`/`TREND_DELTA_THRESHOLD`/`HIGH_STRESS_THRESHOLD` (`TODO_EXPERT_REVIEW`). Frontend integration = G7. |
+| `/api/v1/behavior/profile` | GET | IMPLEMENTED | CONNECTED | IMPLEMENTED | G4-T09 + G4-T12: full payload incl. nested `trendSummary` (TrendSummaryResponse), `dataQualityStatus`, 7d/30d split + `DominantTopic[]`. G4-T14: a committed Daily Answer triggers T05 + T09 after commit; when source data exists but the profile is missing, this endpoint also aggregates lazily and reloads the real profile. A user with no Daily Answer still receives 404 and no fake profile is created. Dashboard exposes a manual `Refresh now` retry without polling. Security 401/403 + 404 declared. Placeholder thresholds `MIN_TREND_COVERAGE`/`TREND_DELTA_THRESHOLD`/`HIGH_STRESS_THRESHOLD` (`TODO_EXPERT_REVIEW`). |
 | `/api/v1/matching/run` | POST | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 | `/api/v1/user-programs` | GET | NOT_STARTED | NOT_CONNECTED | NOT_STARTED | |
 

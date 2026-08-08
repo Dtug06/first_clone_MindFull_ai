@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserDailyFeatureUpsertServiceImpl implements UserDailyFeatureUpsertService {
@@ -30,6 +32,7 @@ public class UserDailyFeatureUpsertServiceImpl implements UserDailyFeatureUpsert
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UUID upsert(UserDailyFeature row) {
         if (row == null) throw new IllegalArgumentException("row must not be null");
         if (row.getUserId() == null || row.getFeatureDate() == null)
